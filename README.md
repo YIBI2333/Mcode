@@ -25,18 +25,6 @@
 
 
 
-## 项目结构
-
-```
-project/
-├── api_config.py      # 存放 DeepSeek API Key 和模型名称
-├── config.py          # 系统配置：路径、Mem0 参数、环境变量
-├── memory_bot.py      # 主程序，实现带记忆的对话
-├── hf_cache/          # 本地嵌入模型（自动下载，约90MB）
-├── mem0_db/           # 长期记忆数据库（ChromaDB，自动生成）
-└── requirements.txt   # 依赖：openai, mem0ai, chromadb, sentence-transformers
-```
-
 ## 用途
 
 一个**带长期记忆的聊天助手**，能跨会话记住用户偏好、事实和互动历史，并基于记忆生成个性化回复。
