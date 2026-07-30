@@ -1,0 +1,52 @@
+{
+  "providers": [
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "base_url": "https://api.deepseek.com",
+      "api_key": "sk-your-key-here",
+      "is_default": false
+    },
+    {
+      "id": "zhipu",
+      "name": "智谱GLM",
+      "base_url": "https://open.bigmodel.cn/api/paas/v4/",
+      "api_key": "your-zhipu-key",
+      "is_default": false
+    },
+    {
+      "id": "agnes",
+      "name": "AgnesAI",
+      "base_url": "https://apihub.agnes-ai.com/v1",
+      "api_key": "your-agnes-key",
+      "is_default": false
+    }
+  ],
+  "roles": {
+    "chat": {
+      "label": "对话生成",
+      "desc": "AI 对话回复使用的模型",
+      "mode": "single",
+      "entries": [
+        {"provider_ids": ["deepseek"], "model": "deepseek-v4-pro", "enabled": true},
+        {"provider_ids": ["zhipu"], "model": "glm-4-flash", "enabled": false}
+      ]
+    },
+    "memory": {
+      "label": "记忆引擎",
+      "desc": "长期记忆提取和检索使用的模型",
+      "mode": "single",
+      "entries": [
+        {"provider_ids": ["deepseek"], "model": "deepseek-v4-pro", "enabled": true}
+      ]
+    },
+    "tool": {
+      "label": "工具调用",
+      "desc": "工具选择与 Live2D 情绪分析使用的模型",
+      "mode": "single",
+      "entries": [
+        {"provider_ids": ["deepseek"], "model": "deepseek-v4-pro", "enabled": true}
+      ]
+    }
+  }
+}

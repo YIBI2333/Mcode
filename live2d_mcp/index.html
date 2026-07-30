@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Live2D</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:transparent}
+#l2d{position:absolute;top:0;left:0;display:block;z-index:0;overflow:hidden}
+
+/* 区域边框 */
+#area-border{position:absolute;top:0;left:0;right:0;bottom:0;border:1.5px dashed rgba(255,255,255,0.45);z-index:9997;pointer-events:none;border-radius:2px}
+body.locked #area-border{display:none}
+
+/* 四角标记 */
+.corner-mk{position:absolute;z-index:9999;pointer-events:none;width:18px;height:18px}
+.corner-mk.tl{top:1px;left:1px;border-top:2.5px solid rgba(255,255,255,0.7);border-left:2.5px solid rgba(255,255,255,0.7)}
+.corner-mk.tr{top:1px;right:1px;border-top:2.5px solid rgba(255,255,255,0.7);border-right:2.5px solid rgba(255,255,255,0.7)}
+.corner-mk.bl{bottom:1px;left:1px;border-bottom:2.5px solid rgba(255,255,255,0.7);border-left:2.5px solid rgba(255,255,255,0.7)}
+.corner-mk.br{bottom:1px;right:1px;border-bottom:2.5px solid rgba(255,255,255,0.7);border-right:2.5px solid rgba(255,255,255,0.7)}
+body.locked .corner-mk{display:none}
+
+/* 缩放抓手 */
+.resize-grip{position:absolute;z-index:10000;-webkit-app-region:no-drag}
+.grip-edge{background:transparent}
+#grip-top{top:0;left:18px;right:18px;height:6px;cursor:ns-resize}
+#grip-bottom{left:18px;right:18px;bottom:0;height:6px;cursor:ns-resize}
+#grip-left{top:18px;bottom:18px;left:0;width:6px;cursor:ew-resize}
+#grip-right{top:18px;bottom:18px;right:0;width:6px;cursor:ew-resize}
+.grip-corner{width:22px;height:22px}
+#grip-tl{top:0;left:0;cursor:nwse-resize}
+#grip-tr{top:0;right:0;cursor:nesw-resize}
+#grip-bl{bottom:0;left:0;cursor:nesw-resize}
+#grip-br{bottom:0;right:0;cursor:nwse-resize}
+body.locked .resize-grip{display:none}
+
+#info{display:none}
+
+/* ====== 对话气泡 ====== */
+#speech-bubble {
+  position: absolute; left: 50%; top: 18px;
+  transform: translateX(-50%);
+  max-width: min(340px, calc(100vw - 30px));
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: rgba(20, 20, 40, 0.82);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #e8e0f0;
+  font-size: 13px; line-height: 1.5;
+  text-align: center; word-break: break-word;
+  pointer-events: none; z-index: 100;
+  opacity: 0; transition: opacity 0.3s;
+}
+#speech-bubble.show { opacity: 1; }
+#speech-bubble::after {
+  content: '';
+  position: absolute; left: 50%; bottom: -8px;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid rgba(20, 20, 40, 0.82);
+}
+body.bubble-hidden #speech-bubble { display: none; }
+</style>
+</head>
+<body>
+
+<div id="area-border"></div>
+<div class="corner-mk tl"></div><div class="corner-mk tr"></div>
+<div class="corner-mk bl"></div><div class="corner-mk br"></div>
+
+<canvas id="l2d"></canvas>
+
+<div id="grip-tl" class="resize-grip grip-corner"></div>
+<div id="grip-tr" class="resize-grip grip-corner"></div>
+<div id="grip-bl" class="resize-grip grip-corner"></div>
+<div id="grip-br" class="resize-grip grip-corner"></div>
+<div id="grip-top" class="resize-grip grip-edge"></div>
+<div id="grip-bottom" class="resize-grip grip-edge"></div>
+<div id="grip-left" class="resize-grip grip-edge"></div>
+<div id="grip-right" class="resize-grip grip-edge"></div>
+
+<div id="info">加载...</div>
+<div id="speech-bubble"></div>
+
+<script src="/model/live2dcubismcore.min.js"></script>
+<script src="/model/pixi.min.js"></script>
+<script src="/model/pixi-live2d-cubism4.min.js"></script>
+<script>
+// ====================== Shell API ======================
+const S=window.agentShell||{onLockChanged(_c){},onChatMessage(_c){},resize(_w,_h,_ax,_ay){},setSize(_w,_h){},moveBy(_dx,_dy){},getModelScale:async()=>1,onModelScaleReset(_c){}, getCustomExpression:async()=>false, onCustomExpressionChanged(_c){}, toggleCustomExpression(){}, onSetParam(_id,_v){}, onSetMultiParams(_p){}, onRequestAllParams(){} , sendAllParamsResponse(_d){}, saveCustomParams(_p){}, getCustomParams:async()=>({}), getShowBubble:async()=>true, onShowBubbleChanged(_c){}, getAutoBlink:async()=>true, onAutoBlinkChanged(_c){}, toggleAutoBlink(){}};
+const $c=document.getElementById('l2d'),$i=document.getElementById('info');
+function info(t){$i.textContent=t}
+
+// ====================== 口型配置 ======================
+// 每个韵母 → {open: 张嘴度 0~1, form: 嘴形 -1=撮唇/圆唇 ~ +1=展唇}
+var VOWEL_MOUTH={
+ a:{open:0.8, form: 0.0},
+ o:{open:0.5, form:-0.4},
+ e:{open:0.3, form: 0.3},
+ i:{open:0.2, form: 0.5},
+ u:{open:0.4, form:-0.5},
+ 'default':{open:0.35, form:0.0},
+ rest:{open:0.04, form:0.0}
+};
+
+// ====================== 情绪动作预设 ======================
+var MOTIONS={
+ neutral:{
+  base:{mouthOpen:0,mouthForm:0, eyeL:1,eyeR:1, eyeSmileL:0,eyeSmileR:0, browLY:0,browRY:0, browLForm:0,browRForm:0, angleX:0,angleY:0,angleZ:0, bodyX:0,bodyY:0,bodyZ:0},
+  entry:[
+   {t:0,   p:{eyeL:1,eyeR:1}, e:'linear'},
+   {t:400, p:{eyeL:1,eyeR:1}, e:'easeOut'}
+  ],
+  idle:{p:{bodyZ:0.03}, period:3000, amp:1.0},
+  micro:[
+   {p:{angleX:3,angleZ:2,bodyX:1.5}, hold:900, weight:1},
+   {p:{angleX:-3,angleZ:-2,bodyX:-1.5}, hold:900, weight:1},
+   {p:{eyeL:0.88,eyeR:0.88, eyeSmileL:0.08,eyeSmileR:0.08}, hold:2000, weight:1.5},  // 放松眯眼（持续较久）
+   {p:{angleY:2.5,angleZ:1}, hold:650, weight:0.8},
+   {p:{angleY:-2.5,angleZ:-1}, hold:650, weight:0.8},
+   {p:{eyeL:1.05,eyeR:1.05, browLY:0.1,browRY:0.1}, hold:1800, weight:1.2},         // 好奇睁大眼
+   {p:{bodyZ:0.05,angleZ:1.5}, hold:700, weight:1},
+   {p:{eyeL:0.82,eyeR:0.82, browLY:-0.06,browRY:-0.06}, hold:1500, weight:1},        // 半闭慵懒
+   {p:{browLY:-0.12,browRY:-0.12}, hold:500, weight:0.7},
+   {p:{eyeL:1.0,eyeR:1.0}, hold:1200, weight:1.3},                                    // 正常睁眼
+  ]
+ },
+ happy:{
+  base:{mouthOpen:0.0,mouthForm:1.0, eyeL:0.7,eyeR:0.7, eyeSmileL:1,eyeSmileR:1, browLY:0.6,browRY:0.6, browLForm:-0.2,browRForm:-0.2, angleX:5,angleY:0,angleZ:0, bodyX:0,bodyY:0,bodyZ:0},
+  entry:[
+   {t:0,   p:{angleX:0,eyeSmileL:0,eyeSmileR:0,browLY:0,browRY:0}, e:'linear'},
+   {t:200, p:{angleX:8,eyeSmileL:0.8,eyeSmileR:0.8,browLY:0.5,browRY:0.5}, e:'easeOut'},
+   {t:450, p:{angleX:3,eyeSmileL:1,eyeSmileR:1,browLY:0.6,browRY:0.6}, e:'easeOut'},
+   {t:600, p:{angleX:5}, e:'easeOut'}
+  ],
+  idle:{p:{angleZ:3,bodyZ:0.05}, period:1500, amp:1.0},
+  micro:[
+   {p:{angleX:8,angleZ:6,eyeSmileL:1.15,eyeSmileR:1.15}, hold:650, weight:1},
+   {p:{eyeL:0.25,eyeR:0.25, eyeSmileL:1.3,eyeSmileR:1.3, angleZ:5,bodyZ:0.06}, hold:1200, weight:1.2},  // 闭眼微笑轻晃
+   {p:{angleZ:-5,bodyZ:0.08,bodyX:2}, hold:750, weight:1},
+   {p:{eyeSmileL:1.3,eyeSmileR:1.3,browLY:0.85,browRY:0.85}, hold:500, weight:1.2},
+   {p:{angleX:3,mouthOpen:0.1,eyeL:0.75,eyeR:0.75}, hold:450, weight:0.7},
+   {p:{angleY:3,angleZ:2}, hold:600, weight:0.8},
+  ]
+ },
+ sad:{
+  base:{mouthOpen:0,mouthForm:-0.6, eyeL:0.5,eyeR:0.5, eyeSmileL:0,eyeSmileR:0, browLY:-0.8,browRY:-0.8, browLForm:0.6,browRForm:0.6, angleX:-5,angleY:0,angleZ:0, bodyX:3,bodyY:0,bodyZ:0},
+  entry:[
+   {t:0,   p:{angleX:0,browLY:0,browRY:0,browLForm:0,browRForm:0,eyeL:1,eyeR:1}, e:'linear'},
+   {t:350, p:{angleX:-8,browLY:-0.5,browRY:-0.5,browLForm:0.4,browRForm:0.4,eyeL:0.6,eyeR:0.6}, e:'easeOut'},
+   {t:700, p:{angleX:-5,browLY:-0.8,browRY:-0.8,browLForm:0.6,browRForm:0.6,eyeL:0.5,eyeR:0.5}, e:'easeOut'}
+  ],
+  idle:{p:{bodyX:2,angleZ:-2}, period:4000, amp:0.6},
+  micro:[
+   {p:{angleX:-3,eyeL:0.4,eyeR:0.4,browLY:-0.9,browRY:-0.9,browLForm:0.7,browRForm:0.7}, hold:1000, weight:1},
+   {p:{bodyX:5,angleZ:-3}, hold:1200, weight:0.8},
+   {p:{angleX:-7,bodyX:1.5,angleY:-2}, hold:900, weight:1},
+   {p:{eyeL:0.55,eyeR:0.55,browLY:-0.85,browRY:-0.85}, hold:700, weight:1.3},
+   {p:{angleZ:2,bodyX:4}, hold:800, weight:0.7},
+  ]
+ },
+ angry:{
+  base:{mouthOpen:0,mouthForm:-0.5, eyeL:1.2,eyeR:1.2, eyeSmileL:0,eyeSmileR:0, browLY:-1,browRY:-1, browLForm:1,browRForm:1, angleX:-8,angleY:0,angleZ:-3, bodyX:0,bodyY:0,bodyZ:0},
+  entry:[
+   {t:0,   p:{browLY:0,browRY:0,browLForm:0,browRForm:0,angleZ:0}, e:'linear'},
+   {t:150, p:{browLY:-0.8,browRY:-0.8,browLForm:0.8,browRForm:0.8,angleZ:-6,angleX:-6}, e:'easeOut'},
+   {t:300, p:{browLY:-1,browRY:-1,browLForm:1,browRForm:1,angleZ:-3,angleX:-8}, e:'easeOut'}
+  ],
+  idle:{p:{angleZ:-2,bodyZ:0.04}, period:2000, amp:0.7},
+  micro:[
+   {p:{angleX:-10,browLY:-1.1,browRY:-1.1,browLForm:1.1,browRForm:1.1,angleZ:-5}, hold:600, weight:1},
+   {p:{eyeL:1.3,eyeR:1.3,browLY:-1.1,browRY:-1.1}, hold:500, weight:1},
+   {p:{angleZ:-5,bodyZ:0.06,bodyX:-2}, hold:700, weight:0.8},
+   {p:{angleX:-6,angleY:3,angleZ:-4}, hold:550, weight:0.9},
+   {p:{mouthForm:-0.7,browLForm:1.1,browRForm:1.1}, hold:650, weight:0.7},
+  ]
+ },
+ surprised:{
+  base:{mouthOpen:0.6,mouthForm:0.1, eyeL:1.8,eyeR:1.8, eyeSmileL:0,eyeSmileR:0, browLY:1,browRY:1, browLForm:-0.3,browRForm:-0.3, angleX:2,angleY:0,angleZ:0, bodyX:-5,bodyY:0,bodyZ:0},
+  entry:[
+   {t:0,   p:{eyeL:1,eyeR:1,browLY:0,browRY:0,mouthOpen:0}, e:'linear'},
+   {t:120, p:{eyeL:1.9,eyeR:1.9,browLY:1,browRY:1,mouthOpen:0.9}, e:'easeOut'},
+   {t:500, p:{eyeL:1.8,eyeR:1.8,mouthOpen:0.6}, e:'easeOut'}
+  ],
+  idle:{p:{bodyX:-2,mouthOpen:0.1}, period:2500, amp:0.4},
+  micro:[
+   {p:{eyeL:1.95,eyeR:1.95,mouthOpen:0.75,browLY:1.1,browRY:1.1}, hold:500, weight:1},
+   {p:{bodyX:-7,angleX:3,eyeL:1.85,eyeR:1.85}, hold:700, weight:1},
+   {p:{angleY:-3,bodyX:-6,angleZ:2}, hold:600, weight:0.8},
+   {p:{mouthOpen:0.5,browLY:0.9,browRY:0.9,eyeL:1.7,eyeR:1.7}, hold:800, weight:1.2},
+   {p:{angleX:4,bodyX:-3,mouthOpen:0.65}, hold:550, weight:0.7},
+  ]
+ }
+};
+
+// ====================== 趣味手势动作 ======================
+// 一次性动画：播放 entry 关键帧后自动回到当前情绪状态
+var GESTURES={
+ sleep:{  // 闭眼休眠：随机 5~30 秒，自动暂停眨眼
+  _sleep:true
+ },
+ wink:{  // 单眼 wink：左眼缓缓闭 → 短暂保持 → 弹回 → 再闭 → 睁开。期间禁用自动眨眼
+  _wink:true,
+  entry:[
+   {t:0,    p:{eyeL:1,eyeR:1, angleZ:0, bodyX:0}, e:'linear'},
+   {t:300,  p:{eyeL:0.03,eyeR:1.1, angleZ:16, angleX:6, bodyX:3, bodyZ:2, eyeSmileL:0.8,eyeSmileR:0.8, browLY:0.5,browRY:0.5}, e:'easeOut'},
+   {t:480,  p:{eyeL:0.03,eyeR:1.1, angleZ:16, angleX:6, bodyX:3, bodyZ:2, eyeSmileL:0.8,eyeSmileR:0.8, browLY:0.5,browRY:0.5}, e:'linear'},
+   {t:630,  p:{eyeL:0.03,eyeR:1.1, angleZ:-4, angleX:2, bodyX:-1, eyeSmileL:0.4,eyeSmileR:0.4}, e:'easeInOut'},
+   {t:780,  p:{eyeL:0.03,eyeR:1.1, angleZ:14, angleX:5, bodyX:2, eyeSmileL:0.7,eyeSmileR:0.7}, e:'easeOut'},
+   {t:960,  p:{eyeL:0.03,eyeR:1.1, angleZ:14, angleX:5, bodyX:2}, e:'linear'},
+   {t:1100, p:{eyeL:1,eyeR:1, angleZ:0, angleX:0, bodyX:0, bodyZ:0, eyeSmileL:0,eyeSmileR:0, browLY:0,browRY:0}, e:'easeOut'},
+  ]
+ },
+ shake:{  // 晃身：身体大幅左右摆动 + 头跟随 + 渐弱收尾
+  entry:[
+   {t:0,    p:{bodyX:0, angleZ:0}, e:'linear'},
+   {t:350,  p:{bodyX:22, angleZ:12, bodyZ:5, angleX:4}, e:'easeOut'},
+   {t:800,  p:{bodyX:-20, angleZ:-10, bodyZ:0, angleX:-3}, e:'easeInOut'},
+   {t:1250, p:{bodyX:17, angleZ:8, bodyZ:4, angleX:2}, e:'easeInOut'},
+   {t:1700, p:{bodyX:-14, angleZ:-6, bodyZ:0}, e:'easeInOut'},
+   {t:2150, p:{bodyX:10, angleZ:4, bodyZ:2}, e:'easeInOut'},
+   {t:2600, p:{bodyX:-7, angleZ:-3}, e:'easeInOut'},
+   {t:3000, p:{bodyX:4, angleZ:1.5}, e:'easeInOut'},
+   {t:3350, p:{bodyX:-2}, e:'easeInOut'},
+   {t:3650, p:{bodyX:0, bodyZ:0, angleZ:0, angleX:0}, e:'easeOut'},
+  ]
+ },
+ tilt_head:{  // 歪头不解：头大角度侧歪 + 微眯眼 + 身体微倾，停顿，弹回
+  entry:[
+   {t:0,    p:{angleZ:0, angleX:0}, e:'linear'},
+   {t:300,  p:{angleZ:16, angleX:5, eyeL:0.8,eyeR:0.8, mouthOpen:0.08, bodyX:2}, e:'easeOut'},
+   {t:1300, p:{angleZ:16, angleX:5, eyeL:0.8,eyeR:0.8, mouthOpen:0.08, bodyX:2}, e:'linear'},
+   {t:1600, p:{angleZ:-4, angleX:0, eyeL:1,eyeR:1, mouthOpen:0, bodyX:0}, e:'easeOut'},
+   {t:1900, p:{angleZ:0}, e:'easeOut'},
+  ]
+ },
+ cute_pose:{  // 卖萌：大幅身体前倾 + 大眼 + 微张嘴 + 歪头 + 挑眉 + 微笑
+  entry:[
+   {t:0,    p:{eyeL:1,eyeR:1, eyeSmileL:0,eyeSmileR:0, bodyX:0, bodyZ:0, angleZ:0}, e:'linear'},
+   {t:300,  p:{eyeL:1.25,eyeR:1.25, eyeSmileL:1,eyeSmileR:1, mouthOpen:0.2, browLY:0.6,browRY:0.6, bodyX:-8, bodyZ:7, angleZ:16, angleX:5}, e:'easeOut'},
+   {t:1500, p:{eyeL:1.25,eyeR:1.25, eyeSmileL:1,eyeSmileR:1, mouthOpen:0.2, browLY:0.6,browRY:0.6, bodyX:-8, bodyZ:7, angleZ:16, angleX:5}, e:'linear'},
+   {t:1900, p:{eyeL:1,eyeR:1, eyeSmileL:0,eyeSmileR:0, mouthOpen:0, browLY:0,browRY:0, bodyX:0, bodyZ:0, angleZ:0, angleX:0}, e:'easeOut'},
+  ]
+ },
+ nod:{  // 点点头：头部上下点头 3 次（ParamAngleY），配合眨眼
+  entry:[
+   {t:0,   p:{angleY:0, eyeL:1,eyeR:1}, e:'linear'},
+   {t:300, p:{angleY:22, eyeL:0.75,eyeR:0.75}, e:'easeOut'},
+   {t:600, p:{angleY:0, eyeL:1,eyeR:1}, e:'easeInOut'},
+   {t:900, p:{angleY:18, eyeL:0.8,eyeR:0.8}, e:'easeOut'},
+   {t:1200,p:{angleY:0, eyeL:1,eyeR:1}, e:'easeInOut'},
+   {t:1500,p:{angleY:12}, e:'easeOut'},
+   {t:1800,p:{angleY:0}, e:'easeOut'},
+  ]
+ },
+ shake_head:{  // 摇摇头：头左右摆动 5 次，渐弱，从容
+  entry:[
+   {t:0,    p:{angleZ:0}, e:'linear'},
+   {t:250,  p:{angleZ:-14}, e:'easeOut'},
+   {t:550,  p:{angleZ:12}, e:'easeInOut'},
+   {t:850,  p:{angleZ:-10}, e:'easeInOut'},
+   {t:1150, p:{angleZ:7}, e:'easeInOut'},
+   {t:1450, p:{angleZ:-4}, e:'easeInOut'},
+   {t:1700, p:{angleZ:2}, e:'easeOut'},
+   {t:1900, p:{angleZ:0}, e:'easeOut'},
+  ]
+ },
+};
+
+// 参数名 → 简写键映射
+var PK={
+ mouthOpen:'ParamMouthOpenY', mouthForm:'ParamMouthForm',
+ eyeL:'ParamEyeLOpen', eyeR:'ParamEyeROpen',
+ eyeSmileL:'ParamEyeLSmile', eyeSmileR:'ParamEyeRSmile',
+ browLY:'ParamBrowLY', browRY:'ParamBrowRY',
+ browLForm:'ParamBrowLForm', browRForm:'ParamBrowRForm',
+ angleX:'ParamAngleX', angleY:'ParamAngleY', angleZ:'ParamAngleZ',
+ bodyX:'ParamBodyAngleX', bodyY:'ParamBodyAngleY', bodyZ:'ParamBodyAngleZ'
+};
+
+// ====================== 状态 ======================
+var app,model,cm,mw=0,mh=0,_scale=1,locked=false;
+
+// 情绪/动作状态
+var curEmotion='neutral', curIntensity=0.3;
+var entryKeys=null, entryIdx=0, entryT0=0, entryFrom=null;
+var idleCfg=null, idlePhase=0;
+var baseTarget=null;       // 目标基础表情参数（简写形式）
+
+// 平滑动画：帧率无关，使用指数衰减 1-exp(-speed*dt)
+var smoothState=null;      // 当前已应用到 Cubism 的参数值
+var SMOOTH_IDLE=10;        // 待机动画速度（值越大越快，10=约 0.3s 内接近目标）
+var SMOOTH_BASE=14;        // 基础表情过渡速度
+var SMOOTH_ENTRY=22;       // 入场动画速度（快速跟踪关键帧）
+
+// 微动作：定期随机做符合当前情绪的小动作，渐入渐出丝滑过渡
+var microActive=null;      // 当前激活的微动作 {p, hold}
+var microUntil=0;          // 微动作保持截止时间戳
+var microNext=0;           // 下次可触发新微动作的时间戳
+var microBlend=0;          // 微动作渐入渐出因子（0=无，1=完全应用）
+var microBlendTarget=0;    // blend 目标值（0 或 1）
+var MICRO_BLEND_SPEED=4;   // blend 帧率无关速度
+var MICRO_INTERVAL_MIN=2200, MICRO_INTERVAL_MAX=5000;  // 微动作间隔 2.2~5 秒
+
+// 自动眨眼：独立于平滑系统的快速眨眼循环
+var blinkEnabled=true;     // 开关（由 expression panel 控制）
+var blinkPhase='open';     // 'open' | 'closing' | 'closed' | 'opening'
+var blinkTimer=0;          // 当前阶段剩余 ms
+var blinkNext=0;           // 下次眨眼时间戳
+var blinkSpeed=0.5;        // 眨眼 lerp 速度（快速）
+var blinkClosedVal=0.08;   // 闭眼时 eyeLOpen/eyeROpen 的值
+var blinkOpenVal=1.0;      // 当前情绪的睁眼值（眨眼开始时记录，适配半闭眼表情）
+var blinkDouble=false;     // 是否双眨
+var BLINK_INTERVAL_MIN=2000, BLINK_INTERVAL_MAX=5500;
+var BLINK_CLOSE_MS=110, BLINK_HOLD_MS=55, BLINK_OPEN_MS=150;
+
+
+// 口型状态
+var ph=[], phT0=0, phDur=0;
+var mouthOpenOverride=0, mouthFormOverride=0;
+var _lastMouthTime=0;
+
+// 帧计时
+var lastFrame=0;
+
+// ====================== 工具函数 ======================
+function lerp(a,b,t){return a+(b-a)*Math.max(0,Math.min(1,t))}
+function easeOut(t){return 1-(1-t)*(1-t)}
+function easeInOut(t){return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2}
+function easeLinear(t){return t}
+function applyEase(fn,t){switch(fn){case'easeOut':return easeOut(t);case'easeInOut':return easeInOut(t);default:return easeLinear(t)}}
+
+// 帧率无关平滑：speed 越大越快，dt 为秒
+function dtSmooth(cur, target, speed, dt){
+ return cur + (target-cur) * (1 - Math.exp(-speed * Math.min(dt, 0.1)));
+}
+
+// 复制一个简写参数对象
+function copyBase(o){
+ if(!o)return{};
+ return {
+  mouthOpen:o.mouthOpen||0, mouthForm:o.mouthForm||0,
+  eyeL:o.eyeL!=null?o.eyeL:1, eyeR:o.eyeR!=null?o.eyeR:1,
+  eyeSmileL:o.eyeSmileL||0, eyeSmileR:o.eyeSmileR||0,
+  browLY:o.browLY||0, browRY:o.browRY||0,
+  browLForm:o.browLForm||0, browRForm:o.browRForm||0,
+  angleX:o.angleX||0, angleY:o.angleY||0, angleZ:o.angleZ||0,
+  bodyX:o.bodyX||0, bodyY:o.bodyY||0, bodyZ:o.bodyZ||0
+ };
+}
+
+// 从 Cubism 模型读取当前实际参数值
+function readActualParams(){
+ var out={};
+ for(var k in PK){
+  try{out[k]=cm.getParameterValueById(PK[k])||0}
+  catch(e){out[k]=smoothState? (smoothState[k]||0):0}
+ }
+ return out;
+}
+
+// 平滑应用参数到 Cubism：帧率无关指数衰减
+function applySmooth(target, speed, dt){
+ if(!smoothState){smoothState=readActualParams()}
+ var blinking=blinkEnabled&&blinkPhase!=='open';
+ for(var k in PK){
+  if((k==='mouthOpen'||k==='mouthForm')&&mouthOpenOverride>0)continue;
+  if(blinking&&(k==='eyeL'||k==='eyeR'))continue;
+  var from=smoothState[k]!=null?smoothState[k]:0;
+  var to=target[k]!=null?target[k]:0;
+  smoothState[k]=dtSmooth(from, to, speed||SMOOTH_BASE, dt||0.016);
+  try{cm.setParameterValueById(PK[k],smoothState[k])}catch(_e){}
+ }
+}
+
+// ====================== 动作引擎 ======================
+var _prevEmotion='neutral';  // 手势结束后回到的情绪
+var _sleepBlinkWasOn=false;  // 休眠前自动眨眼是否开启
+
+function startMotion(emotion, intensity){
+ intensity=Math.max(0,Math.min(1,intensity||0.5));
+
+ // ── 手势：一次性动画，播完回到当前情绪 ──
+ if(GESTURES[emotion]){
+  var ges=GESTURES[emotion];
+  // 上一个手势暂停了眨眼，且新手势不需要暂停 → 恢复
+  if(_sleepBlinkWasOn && !ges._sleep && !ges._wink){
+   blinkEnabled=true; _sleepBlinkWasOn=false;
+   if(blinkPhase==='open')blinkNext=performance.now()+800;}
+
+  // 休眠特殊处理：随机时长 + 暂停自动眨眼
+  if(ges._sleep){
+   var sleepMs=5000+Math.random()*25000;
+   _sleepBlinkWasOn=blinkEnabled;
+   blinkEnabled=false;
+   entryKeys=[
+    {t:0,    p:{eyeL:1,eyeR:1}, e:'linear'},
+    {t:400,  p:{eyeL:0.05,eyeR:0.05, angleX:-3, bodyZ:2}, e:'easeOut'},
+    {t:400+sleepMs, p:{eyeL:0.05,eyeR:0.05, angleX:-3, bodyZ:2}, e:'linear'},
+    {t:400+sleepMs+400, p:{eyeL:1,eyeR:1, angleX:0, bodyZ:0}, e:'easeOut'},
+   ];
+  }else if(ges._wink){
+   // wink 期间暂停自动眨眼
+   if(blinkEnabled){_sleepBlinkWasOn=true; blinkEnabled=false;}
+   entryKeys=ges.entry;
+  }else{
+   entryKeys=ges.entry;
+  }
+
+  entryIdx=0;
+  entryT0=performance.now();
+  entryFrom=readActualParams();
+  return;
+ }
+
+ // ── 情绪：持久切换表情状态 ──
+ if(!MOTIONS[emotion])emotion='neutral';
+
+ // 清理特殊状态
+ if(_sleepBlinkWasOn){blinkEnabled=true; _sleepBlinkWasOn=false;
+  if(blinkPhase==='open')blinkNext=performance.now()+800;}
+
+ if(emotion===curEmotion){
+  curIntensity=intensity;
+  return;
+ }
+
+ _prevEmotion=curEmotion;
+ curEmotion=emotion;
+ curIntensity=intensity;
+
+ var mot=MOTIONS[emotion];
+
+ baseTarget=copyBase(mot.base);
+ entryKeys=mot.entry;
+ entryIdx=0;
+ entryT0=performance.now();
+ entryFrom=readActualParams();
+ idleCfg=mot.idle||null;
+ idlePhase=0;
+
+ microActive=null; microPrevOff={};
+ microBlend=0; microBlendTarget=0;
+ microUntil=0;
+ microNext=performance.now() + MICRO_INTERVAL_MIN + Math.random()*(MICRO_INTERVAL_MAX-MICRO_INTERVAL_MIN);
+
+ info('🎭 '+emotion+' ('+Math.round(intensity*100)+'%)');
+}
+
+// 加权随机选取微动作
+function pickMicro(emotion){
+ var mot=MOTIONS[emotion];
+ if(!mot||!mot.micro||!mot.micro.length)return null;
+ var total=0;
+ for(var i=0;i<mot.micro.length;i++)total+=mot.micro[i].weight||1;
+ var r=Math.random()*total, acc=0;
+ for(var i=0;i<mot.micro.length;i++){acc+=mot.micro[i].weight||1;if(r<=acc)return mot.micro[i]}
+ return mot.micro[0];
+}
+
+// 更新微动作状态（帧率无关，使用 dtSmooth 渐变）
+function updateMicro(now, dt){
+ if(entryKeys||!baseTarget)return;
+ // 帧率无关平滑 blend
+ microBlend=dtSmooth(microBlend, microBlendTarget, MICRO_BLEND_SPEED, dt);
+ if(microActive){
+  if(now>=microUntil){
+   // 微动作结束 → 渐出（加一点延迟让收尾更自然）
+   if(microBlend<0.03){microActive=null; microBlendTarget=0;
+    microNext=now+MICRO_INTERVAL_MIN+Math.random()*(MICRO_INTERVAL_MAX-MICRO_INTERVAL_MIN)}
+   else microBlendTarget=0;
+  }
+ }else if(now>=microNext&&microBlend<0.02){
+  microActive=pickMicro(curEmotion);
+  if(microActive){microUntil=now+microActive.hold; microBlendTarget=1}
+ }
+}
+
+// 获取当前微动作参数偏移量（乘以 blend 因子）
+function getMicroOffset(){
+ if(!microActive&&microBlend<0.005)return null;
+ var off=microActive?microActive.p:(microPrevOff||{});
+ microPrevOff=off;
+ var out={}, b=Math.max(0,Math.min(1,microBlend));
+ for(var k in off){out[k]=off[k]*b}
+ return out;
+}
+var microPrevOff={};
+
+// ====================== 自动眨眼引擎 ======================
+function scheduleBlink(now, isDouble){
+ blinkDouble=!!isDouble;
+ blinkPhase='closing';
+ blinkTimer=BLINK_CLOSE_MS;
+ blinkNext=now+BLINK_INTERVAL_MIN+Math.random()*(BLINK_INTERVAL_MAX-BLINK_INTERVAL_MIN);
+ // 记录眨眼开始时当前眼睛实际开度（适配半闭眼表情如 sad 0.5、happy 0.7）
+ if(smoothState&&smoothState.eyeL!=null){
+  blinkOpenVal=(smoothState.eyeL+smoothState.eyeR)/2;
+ }else if(cm){
+  try{blinkOpenVal=(cm.getParameterValueById('ParamEyeLOpen')+cm.getParameterValueById('ParamEyeROpen'))/2}
+  catch(_e){blinkOpenVal=1.0}
+ }else{blinkOpenVal=1.0}
+ if(blinkOpenVal<0.15)blinkOpenVal=0.15;  // 太低没意义
+}
+
+function updateBlink(now){
+ if(!cm||!blinkEnabled)return;
+ if(blinkPhase==='open'){
+  if(now>=blinkNext){
+   scheduleBlink(now, Math.random()<0.15);
+  }
+  return;
+ }
+
+ blinkTimer-=16;
+ var t,targetEye;
+ if(blinkPhase==='closing'){
+  t=1-Math.max(0,blinkTimer/BLINK_CLOSE_MS);
+  targetEye=lerp(blinkOpenVal, blinkClosedVal, easeOut(t));
+  if(blinkTimer<=0){blinkPhase='closed';blinkTimer=BLINK_HOLD_MS}
+ }else if(blinkPhase==='closed'){
+  targetEye=blinkClosedVal;
+  if(blinkTimer<=0){blinkPhase='opening';blinkTimer=BLINK_OPEN_MS}
+ }else if(blinkPhase==='opening'){
+  t=1-Math.max(0,blinkTimer/BLINK_OPEN_MS);
+  targetEye=lerp(blinkClosedVal, blinkOpenVal, easeOut(t));
+  if(blinkTimer<=0){
+   if(blinkDouble){
+    blinkDouble=false;blinkPhase='closing';blinkTimer=BLINK_CLOSE_MS;
+   }else{
+    blinkPhase='open';blinkNext=now+BLINK_INTERVAL_MIN+Math.random()*(BLINK_INTERVAL_MAX-BLINK_INTERVAL_MIN);
+   }
+  }
+ }
+
+ try{
+  cm.setParameterValueById('ParamEyeLOpen',targetEye);
+  cm.setParameterValueById('ParamEyeROpen',targetEye);
+ }catch(_e){}
+ if(smoothState){smoothState.eyeL=targetEye;smoothState.eyeR=targetEye}
+}
+
+function updateMotion(now, dt){
+ if(!cm)return;
+
+ // ====== Entry 动画（快速跟踪关键帧，但不突变） ======
+ if(entryKeys&&entryIdx<entryKeys.length){
+  var kf=entryKeys[entryIdx];
+  var elapsed=now-entryT0;
+  if(elapsed>=kf.t){
+   // 到达关键帧 → 设置目标值
+   var targetP=copyBase(entryFrom);
+   for(var k in kf.p){targetP[k]=kf.p[k]}
+   entryFrom=targetP;
+   entryIdx++;
+   if(entryIdx<entryKeys.length){
+    entryT0=now;
+   }else{
+    // entry 动画结束
+    entryKeys=null;
+    // 休眠/wink 结束 → 恢复眨眼
+    if(_sleepBlinkWasOn){blinkEnabled=true; _sleepBlinkWasOn=false;
+     if(blinkPhase==='open')blinkNext=performance.now()+800;}
+    // 手势结束 → 回到当前情绪的 base 状态
+    if(!idleCfg){
+     startMotion(curEmotion, curIntensity);
+    }
+   }
+   // 关键帧到达后用较高速度追上
+   applySmooth(targetP, SMOOTH_ENTRY, dt);
+   return;
+  }
+  // 在当前段内插值目标
+  var t=Math.max(0,Math.min(1,elapsed/kf.t));
+  t=applyEase(kf.e,t);
+  var lerpP=copyBase(entryFrom);
+  for(var kk in kf.p){lerpP[kk]=lerp(entryFrom[kk]!=null?entryFrom[kk]:0,kf.p[kk],t)}
+  applySmooth(lerpP, SMOOTH_ENTRY, dt);
+  return;
+ }
+
+ // ====== 平滑过渡到 baseTarget + 待机叠加 + 微动作 ======
+ updateMicro(now, dt);
+
+ // 构建组合目标 = baseTarget + idle wave + micro offset
+ var combined=baseTarget?copyBase(baseTarget):copyBase(MOTIONS.neutral.base);
+
+ if(idleCfg){
+  idlePhase+=2*Math.PI*dt/(idleCfg.period/1000);
+  if(idlePhase>Math.PI*2)idlePhase-=Math.PI*2;
+  // 主波 + 副波叠加（更有机的呼吸感）
+  var wave=Math.sin(idlePhase)*idleCfg.amp*curIntensity;
+  var wave2=Math.sin(idlePhase*1.7+0.8)*idleCfg.amp*0.35*curIntensity;
+  for(var kk in idleCfg.p){
+   if(mouthOpenOverride>0&&(kk==='mouthOpen'||kk==='mouthForm'))continue;
+   combined[kk]=(combined[kk]||0)+idleCfg.p[kk]*(wave+wave2);
+  }
+ }
+
+ // 叠加微动作偏移
+ var microOff=getMicroOffset();
+ if(microOff){
+  for(var kk in microOff){
+   if(mouthOpenOverride>0&&(kk==='mouthOpen'||kk==='mouthForm'))continue;
+   combined[kk]=(combined[kk]||0)+microOff[kk];
+  }
+ }
+
+ // 统一使用待机平滑速度（微动作通过 blend 因子自然渐入渐出）
+ applySmooth(combined, SMOOTH_IDLE, dt);
+}
+
+// ====================== 口型引擎 ======================
+function startLipSync(phonemes, duration){
+ if(!phonemes||!phonemes.length)return;
+ ph=phonemes;
+ phT0=performance.now();
+ phDur=duration||3000;
+}
+
+// 口型平滑参数（帧率无关，指数衰减：值越大越快）
+var MOUTH_OPEN_SPEED=60;   // 张口速度
+var MOUTH_CLOSE_SPEED=36;  // 闭合速度
+var MOUTH_REST_OPEN=0.02;  // 音素间隙微张
+
+// 帧率无关的指数平滑辅助
+function _expSmooth(cur, target, speed, dt){
+ return cur + (target - cur) * (1 - Math.exp(-speed * dt));
+}
+
+function updateMouth(now){
+ if(!cm||phDur<=0)return;
+ var t=now-phT0;
+ var dt=Math.min(0.05, (now - (_lastMouthTime||now)) / 1000);
+ _lastMouthTime=now;
+ if(dt<=0)dt=0.016;
+
+ // 说话结束 → 丝滑闭合回去
+ if(t>phDur+200){
+  var to=_expSmooth(mouthOpenOverride, baseTarget?baseTarget.mouthOpen||0:0, MOUTH_CLOSE_SPEED*1.3, dt);
+  var tf=_expSmooth(mouthFormOverride, baseTarget?baseTarget.mouthForm||0:0, MOUTH_CLOSE_SPEED*1.3, dt);
+  cm.setParameterValueById('ParamMouthOpenY',to);
+  cm.setParameterValueById('ParamMouthForm',tf);
+  mouthOpenOverride=to;mouthFormOverride=tf;
+  if(smoothState){smoothState.mouthOpen=to;smoothState.mouthForm=tf}
+  if(Math.abs(to-(baseTarget?baseTarget.mouthOpen||0:0))<0.01){
+   phDur=0;ph=[];mouthOpenOverride=0;mouthFormOverride=0;
+  }
+  return;
+ }
+
+ // 查找当前音素
+ var best=null, nextBest=null;
+ for(var i=0;i<ph.length;i++){
+  var p=ph[i];
+  if(p.s<=t&&p.e>=t){best=p;nextBest=(i+1<ph.length)?ph[i+1]:null;break}
+  if(p.s>t&&!best){nextBest=p;break}
+ }
+
+ if(best){
+  var cls=best['class']||'default';
+  var cfg=VOWEL_MOUTH[cls]||VOWEL_MOUTH['default'];
+  var targetOpen=cfg.open;
+  var targetForm=cfg.form;
+  var dur=best.e-best.s;
+
+  // 提前预过渡：下一个音素差异大时，提前平滑过渡（消除突变感）
+  if(nextBest){
+   var ncls=nextBest['class']||'default';
+   var ncfg=VOWEL_MOUTH[ncls]||VOWEL_MOUTH['default'];
+   var remaining=best.e-t;
+   var window=90; // 预过渡窗口 ms
+   if(remaining<window && Math.abs(ncfg.open-cfg.open)>0.12){
+    var blend=1-(remaining/window); blend=blend*blend; // ease-in quad
+    targetOpen=cfg.open+(ncfg.open-cfg.open)*blend*0.55;
+    targetForm=cfg.form+(ncfg.form-cfg.form)*blend*0.55;
+   }
+  }
+
+  // 音素保持期间微呼吸波动（避免口型完全静止，模拟真人微动）
+  if(dur>100){
+   var progress=(t-best.s)/dur;
+   if(progress>0.12){
+    var wave=Math.sin(t*0.022+cls.charCodeAt(0))*0.08;  // 持续音素时张合波动
+    targetOpen+=wave;
+   }
+  }
+
+  // 张口快、合口稍慢：非对称速度让张合更有弹性
+  var speed=targetOpen>mouthOpenOverride ? MOUTH_OPEN_SPEED : MOUTH_OPEN_SPEED*0.72;
+  var to=_expSmooth(mouthOpenOverride, targetOpen, speed, dt);
+  var tf=_expSmooth(mouthFormOverride, targetForm, speed*0.85, dt);
+
+  mouthOpenOverride=to;mouthFormOverride=tf;
+  cm.setParameterValueById('ParamMouthOpenY',to);
+  cm.setParameterValueById('ParamMouthForm',tf);
+  if(smoothState){smoothState.mouthOpen=to;smoothState.mouthForm=tf}
+ }else{
+  // 音素间隙：自然闭合到微张（比张口快一点，模拟真人快速闭嘴）
+  var to=_expSmooth(mouthOpenOverride, MOUTH_REST_OPEN, MOUTH_CLOSE_SPEED, dt);
+  var tf=_expSmooth(mouthFormOverride, baseTarget?baseTarget.mouthForm||0:0, MOUTH_CLOSE_SPEED*0.8, dt);
+  mouthOpenOverride=to;mouthFormOverride=tf;
+  cm.setParameterValueById('ParamMouthOpenY',to);
+  cm.setParameterValueById('ParamMouthForm',tf);
+  if(smoothState){smoothState.mouthOpen=to;smoothState.mouthForm=tf}
+ }
+}
+
+
+// ====================== 窗口管理 ======================
+function pos(){
+ if(!model||!mw)return;
+ model.anchor.set(0.5,0);
+ model.scale.x=_scale;
+ model.scale.y=_scale;
+ model.x=window.innerWidth/2;
+ model.y=0;
+}
+// 窗口大小变化时同步 PIXI/canvas
+window.addEventListener('resize',function(){
+ var w=window.innerWidth,h=window.innerHeight;
+ if(app){app.renderer.resize(w,h);$c.style.width=w+'px';$c.style.height=h+'px';}
+ pos();
+});
+
+// 锁定
+S.onLockChanged(l=>{locked=l;document.body.classList.toggle('locked',l)});
+
+// ===== 窗口缩放（四角+四边抓手）=====
+var MIN_W=180,MAX_W=1200,MIN_H=200,MAX_H=900;
+var GE={
+ 'grip-br':function(ow,oh,dx,dy){return{w:clampW(ow+dx),h:clampH(oh+dy),ax:0,ay:0}},
+ 'grip-bl':function(ow,oh,dx,dy){return{w:clampW(ow-dx),h:clampH(oh+dy),ax:1,ay:0}},
+ 'grip-tr':function(ow,oh,dx,dy){return{w:clampW(ow+dx),h:clampH(oh-dy),ax:0,ay:1}},
+ 'grip-tl':function(ow,oh,dx,dy){return{w:clampW(ow-dx),h:clampH(oh-dy),ax:1,ay:1}},
+ 'grip-right':function(ow,oh,dx){return{w:clampW(ow+dx),h:oh,ax:0,ay:0}},
+ 'grip-left':function(ow,oh,dx){return{w:clampW(ow-dx),h:oh,ax:1,ay:0}},
+ 'grip-bottom':function(ow,oh,_,dy){return{w:ow,h:clampH(oh+dy),ax:0,ay:0}},
+ 'grip-top':function(ow,oh,_,dy){return{w:ow,h:clampH(oh-dy),ax:0,ay:1}}
+};
+function clampW(v){return Math.max(MIN_W,Math.min(MAX_W,Math.round(v)))}
+function clampH(v){return Math.max(MIN_H,Math.min(MAX_H,Math.round(v)))}
+
+var rz=null,_rt=0;
+document.querySelectorAll('.resize-grip').forEach(function(g){
+ if(!GE[g.id])return;
+ g.addEventListener('mousedown',function(e){if(locked||e.button!==0)return;e.preventDefault();e.stopImmediatePropagation();rz={sx:e.screenX,sy:e.screenY,ow:window.innerWidth,oh:window.innerHeight,gid:g.id};_rt=0})
+});
+window.addEventListener('mousemove',function(e){
+ if(!rz)return;var n=performance.now();if(n-_rt<16)return;_rt=n;
+ var r=GE[rz.gid](rz.ow,rz.oh,e.screenX-rz.sx,e.screenY-rz.sy);
+ S.resize(r.w,r.h,r.ax,r.ay);
+ if(app){app.renderer.resize(r.w,r.h);$c.style.width=r.w+'px';$c.style.height=r.h+'px';}
+ pos();
+});
+window.addEventListener('mouseup',function(){if(rz){rz=null;requestAnimationFrame(function(){if(app){var ww=window.innerWidth,wh=window.innerHeight;app.renderer.resize(ww,wh);$c.style.width=ww+'px';$c.style.height=wh+'px';pos()}})};});
+
+// ===== 滚轮缩放模型 =====
+var _wAcc=0,_wRaf=0;
+document.addEventListener('wheel',function(e){
+ if(locked)return;e.preventDefault();
+ var dir=e.deltaY>0?-1:1;
+ _wAcc+=dir;
+ if(!_wRaf){_wRaf=requestAnimationFrame(function(){_wRaf=0;
+  var steps=Math.abs(_wAcc);
+  var factor=Math.pow(_wAcc>0?1.12:0.88,steps);
+  _scale=Math.max(0.03,Math.min(2.0,_scale*factor));
+  _wAcc=0;pos();S.saveModelScale(_scale);
+ })}
+},{capture:true,passive:false});
+
+// ====================== IPC 消息处理 ======================
+S.onChatMessage(function(m){
+ handleMessage(m);
+});
+
+// ====================== 对话气泡 ======================
+var $bubble = document.getElementById('speech-bubble');
+var showBubble = true;
+var bubbleTimer = null;
+var BUBBLE_FADE_DELAY = 6000; // 最后一句播完后的停留时间
+
+function setBubbleText(text, durationMs) {
+  if (!text) return;
+  $bubble.textContent = text;
+  $bubble.classList.add('show');
+  // 每句都按语音时长停留，最后一句用长延迟兜底
+  clearTimeout(bubbleTimer);
+  var ms = (durationMs || 2000) + 800;
+  bubbleTimer = setTimeout(function() {
+    $bubble.classList.remove('show');
+  }, ms);
+}
+
+function hideBubble() {
+  $bubble.classList.remove('show');
+  clearTimeout(bubbleTimer);
+}
+
+// Bubble toggle from settings
+try {
+  S.onShowBubbleChanged(function(on) {
+    showBubble = on;
+    document.body.classList.toggle('bubble-hidden', !on);
+    if (!on) hideBubble();
+  });
+  S.getShowBubble().then(function(on) {
+    showBubble = on;
+    document.body.classList.toggle('bubble-hidden', !on);
+  });
+} catch(_) {}
+
+// ====================== WebSocket（MCP 服务器广播） ======================
+var ws=null,wsReconnectTimer=null;
+function connectWS(){
+ try{
+  ws=new WebSocket('ws://localhost:8850');
+  ws.onopen=function(){info('🔗 MCP');if(wsReconnectTimer){clearInterval(wsReconnectTimer);wsReconnectTimer=null}};
+  ws.onmessage=function(e){
+   try{var m=JSON.parse(e.data);handleMessage(m)}catch(_err){}
+  };
+  ws.onclose=function(){if(!wsReconnectTimer)wsReconnectTimer=setInterval(connectWS,3000)};
+  ws.onerror=function(){ws.close()};
+ }catch(_e){}
+}
+connectWS();
+
+// 统一消息处理（IPC 和 WebSocket 共用）
+function handleMessage(m){
+ if(!cm)return;
+
+ // speak 消息 → 口型同步 + 情绪动作 + 气泡
+ if(m.type==='speak'){
+  if(m.text){
+   // 简单音素生成：按字符估算
+   var chars=m.text.replace(/\s/g,'').split('');
+   var estimatedPhonemes=[];
+   var perChar=Math.max(60,Math.min(200,(m.duration||3000)/Math.max(1,chars.length)));
+   var vowelMap={a:'啊阿大他拿哈拉扎擦萨马那卡压加假家下夏丫呀把怕妈发打塔呐啦嘎咖哈巴爬麻法搭塌那拉扎查杀撒杂擦鸦鸭罢霸骂八拔爸',o:'噢哦喔播波破莫佛多托诺罗锅郭扩或左错所若弱说窝我握卧蜗涡',e:'呃鹅哥科和这车社热得特呢乐个可合者策色额恶饿厄遏扼鄂讹',i:'一以已意义衣医依移疑乙译亿益忆蚁椅宜仪遗倚翼役疫毅抑笔比鼻闭毕逼彼碧蔽壁避臂币弊',u:'五无物务武午舞吴误乌污屋恶雾悟吾勿巫呜诬不部步布补捕卜簿埠怖哺夫父服付府副富复附妇负福幅伏符辅覆腐'};
+   for(var i=0;i<chars.length;i++){
+    var c=chars[i],cls='default';
+    for(var vk in vowelMap){if(vowelMap[vk].indexOf(c)>=0){cls=vk;break}}
+    estimatedPhonemes.push({t:c,s:Math.round(i*perChar),e:Math.round((i+1)*perChar),'class':cls});
+   }
+   startLipSync(estimatedPhonemes,chars.length*perChar);
+  }
+  if(m.emotion)startMotion(m.emotion,m.intensity||0.7);
+  // 气泡：显示 speak 文本
+  if(m.text && showBubble) setBubbleText(m.text, m.duration || 0);
+ }
+
+ // lip-sync 消息（从 chat_panel 来，带精确音素 + 气泡）
+ if(m.type==='lip-sync'){
+  if(m.phonemes&&m.phonemes.length){
+   startLipSync(m.phonemes,m.duration||0);
+  }
+  if(m.emotion)startMotion(m.emotion,m.intensity||0.5);
+  // 气泡：显示当前句子文本，TTS 播完后自动消失
+  if(m.text && showBubble) setBubbleText(m.text, m.duration || 0);
+ }
+
+ // ai-thinking 消息 → 思考中气泡
+ if(m.type==='ai-thinking'){
+  if(showBubble) setBubbleText('...', 0);
+ }
+
+ // emotion 消息（直接情绪/动作命令）
+ if(m.type==='emotion'){
+  startMotion(m.emotion||'neutral',m.intensity!=null?m.intensity:0.8);
+ }
+
+ // ai-done 消息 → 关键字兜底情绪检测
+ if(m.type==='ai-done'&&m.text){
+  var t=m.text,em='neutral';
+  if(/[哈哈笑嘻开心快乐高兴欢呼]/.test(t))em='happy';
+  else if(/[难过悲伤哭伤心遗憾叹气]/.test(t))em='sad';
+  else if(/[生气愤怒讨厌怒不满]/.test(t))em='angry';
+  else if(/[惊讶震惊居然竟然意外]/.test(t))em='surprised';
+  if(em!=='neutral')startMotion(em,0.7);
+ }
+}
+
+// ====================== 帧循环 ======================
+(function tick(){
+ requestAnimationFrame(tick);
+ if(!cm){if(model&&model.internalModel)cm=model.internalModel.coreModel;if(!cm)return}
+ var now=performance.now();
+ if(!lastFrame)lastFrame=now;
+ var dt=(now-lastFrame)/1000;
+ if(dt<=0)dt=0.016;
+
+ updateMotion(now, dt);
+ updateMouth(now);
+ updateBlink(now);
+ lastFrame=now;
+})();
+
+// ====================== 初始化 ======================
+(async function(){
+ var w=window.innerWidth,h=window.innerHeight;
+ app=new PIXI.Application({view:$c,transparent:true,width:w,height:h,backgroundAlpha:0,antialias:true,resolution:1});
+ // 确保 canvas CSS 尺寸与渲染器一致
+ $c.style.width=w+'px';$c.style.height=h+'px';
+ model=await PIXI.live2d.Live2DModel.from('/live2d-resources/MO/MO.model3.json',{autoInteract:false});
+ mw=model.width;mh=model.height;cm=model.internalModel.coreModel;
+ app.stage.addChild(model);
+
+ // 计算初始缩放：75% 窗口容纳量作为默认值
+	var fitScale=Math.min(h/mh,w/mw);
+	var defaultScale=fitScale*0.85;
+	var _scaleLoaded=false;
+	S.getModelScale().then(function(v){
+	 if(v&&v>=0.03&&v<=2.0){
+	  _scale=v;
+	  _scaleLoaded=true;
+	 }else{
+	  _scale=defaultScale;
+	 }
+	})["catch"](function(){_scale=defaultScale})["finally"](function(){
+	 if(!_scaleLoaded){
+	  S.saveModelScale(_scale);
+	 }
+	 pos();
+	});
+
+ // 初始化为 neutral 表情
+ baseTarget=copyBase(MOTIONS.neutral.base);
+ idleCfg=MOTIONS.neutral.idle||null;
+ // 从 Cubism 读取初始值，后续由 updateMotion 平滑接管
+ smoothState=readActualParams();
+ applySmooth(baseTarget, 0.6);
+ // 初始化微动作计时器（1.5秒后开始）
+ microNext=performance.now()+1500;
+ info('MO ✅');
+})();
+
+// 重置缩放/位置回调
+S.onModelScaleReset(function(s){
+ if(s>0){_scale=s}
+ else{_scale=Math.min(window.innerHeight/mh,window.innerWidth/mw)*0.85}
+  pos();
+ S.saveModelScale(_scale);
+});
+// ====================== Custom expression (MO custom appearance) ======================
+var customExpression=false, exp3Params=null, savedParams={};
+
+// Load expression file once (for preset reference)
+fetch('/live2d-resources/MO/墨白.exp3.json')
+ .then(function(r){return r.json()})
+ .then(function(data){exp3Params=data.Parameters;})
+ .catch(function(){});
+
+// Debounce-save custom params to disk
+var _saveParamsTimer=null;
+function persistParams(){
+ clearTimeout(_saveParamsTimer);
+ _saveParamsTimer=setTimeout(function(){
+  try{S.saveCustomParams(savedParams)}catch(_){}
+ }, 400);
+}
+
+// Apply a set of params to the model
+function applyParamMap(map){
+ if(!cm) return;
+ for(var pid in map){
+  if(!map.hasOwnProperty(pid)) continue;
+  try{cm.setParameterValueById(pid, parseFloat(map[pid]))}catch(_){}
+ }
+}
+
+// Apply all exp3 preset values (for "套用预设" button)
+function applyExpPresets(){
+ if(!cm||!exp3Params) return;
+ for(var i=0;i<exp3Params.length;i++){
+  var p=exp3Params[i];
+  try{cm.setParameterValueById(p.Id, p.Value)}catch(_){}
+  savedParams[p.Id]=p.Value;
+ }
+ persistParams();
+}
+
+// Toggle custom expression: apply saved params or reset to zero
+// 自动眨眼开关监听
+S.onAutoBlinkChanged(function(on){blinkEnabled=on;if(on&&blinkPhase==='open'){blinkNext=performance.now()+800}});
+S.getAutoBlink().then(function(v){blinkEnabled=v;if(v){blinkNext=performance.now()+1200}}).catch(function(){});
+
+S.onCustomExpressionChanged(function(on){
+ customExpression=on;
+ if(on){
+  // Re-apply saved params; if none saved yet, apply exp3 presets
+  if(Object.keys(savedParams).length>0) applyParamMap(savedParams);
+  else applyExpPresets();
+ }else{
+  // Reset all to zero
+  if(exp3Params){
+   for(var i=0;i<exp3Params.length;i++){
+    try{cm.setParameterValueById(exp3Params[i].Id, 0)}catch(_){}
+   }
+  }
+  savedParams={};
+  persistParams();
+ }
+});
+
+// Startup: restore saved custom params
+Promise.all([
+ S.getCustomExpression(),
+ S.getCustomParams().catch(function(){return {}})
+]).then(function(r){
+ var wasOn=r[0], persisted=r[1]||{};
+ if(wasOn){
+  customExpression=true;
+  if(Object.keys(persisted).length>0){
+   savedParams=persisted;
+   applyParamMap(savedParams);
+  }else if(exp3Params){
+   applyExpPresets();
+  }
+ }
+});
+
+// ===== Param control from expression panel (with auto-save) =====
+S.onSetParam(function(paramId, value){
+ if(!cm) return;
+ try{cm.setParameterValueById(paramId, parseFloat(value))}catch(_){}
+ savedParams[paramId]=parseFloat(value);
+ persistParams();
+});
+
+S.onSetMultiParams(function(params){
+ if(!cm) return;
+ for(var i=0;i<params.length;i++){
+  try{cm.setParameterValueById(params[i].Id, parseFloat(params[i].Value))}catch(_){}
+  savedParams[params[i].Id]=parseFloat(params[i].Value);
+ }
+ persistParams();
+});
+
+S.onRequestAllParams(function(){
+ if(!cm) return;
+ var out=[];
+ if(exp3Params){
+  for(var i=0;i<exp3Params.length;i++){
+   var p=exp3Params[i];
+   try{out.push({Id:p.Id, Value:0})}catch(_){}
+  }
+ }
+ S.sendAllParamsResponse(out);
+});
+
+</script>
+</body>
+</html>
+
+</script>
+</body>
+</html>

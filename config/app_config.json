@@ -1,0 +1,10 @@
+{
+  "short_term_history_length": 10,
+  "memory_search_limit": 3,
+  "max_agent_steps": 30,
+  "tool_choice": "auto",
+  "greet_on_startup": true,
+  "heartbeat_interval": 240,
+  "heartbeat_enabled": true,
+  "tool_tts_enabled": true
+}

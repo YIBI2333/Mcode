@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "live2d-avatar": {
+      "command": "node",
+      "args": ["server.js"],
+      "cwd": "${workspaceFolder}/live2d_mcp"
+    }
+  }
+}

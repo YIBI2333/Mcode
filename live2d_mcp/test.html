@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>MO 参数测试</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:transparent;font:10px/1.3 -apple-system,"Microsoft YaHei",sans-serif;display:flex}
+#l2d{flex:1;min-width:200px;display:block}
+.panel{width:230px;background:rgba(12,12,20,.92);color:#c8c8d0;overflow-y:auto;overflow-x:hidden;padding:5px 4px;flex-shrink:0;pointer-events:auto;backdrop-filter:blur(8px)}
+#panel-body{border-right:1px solid rgba(255,255,255,.06)}
+#panel-custom{border-left:1px solid rgba(255,255,255,.08)}
+.panel h3{font-size:9px;font-weight:700;color:#e8b860;margin:5px 0 2px;padding-top:3px;border-top:1px solid rgba(255,255,255,.08);text-transform:uppercase;letter-spacing:.5px}
+.panel h3:first-child{border:0;margin-top:0;padding-top:0}
+.panel h3.blue{color:#7eb8e0}
+.panel .row{display:flex;gap:2px;margin:3px 0}
+.panel .row input{flex:1;min-width:0;padding:2px 4px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#ddd;border-radius:3px;font-size:9px;outline:none}
+.panel .row input:focus{border-color:#e8b860}
+.panel button{padding:2px 5px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#c8c8d0;border-radius:3px;cursor:pointer;font-size:9px;transition:all .15s}
+.panel button:hover{background:rgba(232,184,96,.18)}
+.panel label.slider{display:flex;align-items:center;gap:2px;margin:2px 0}
+.panel label.slider .name{width:52px;font-size:8px;color:#aaa;text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.panel label.slider input[type=range]{flex:1;height:3px;accent-color:#e8b860;margin:0;cursor:pointer}
+.panel label.slider .val{width:26px;font-size:7px;color:#e8b860;text-align:right;flex-shrink:0}
+.panel .act{display:flex;gap:2px;flex-wrap:wrap;margin:3px 0}
+.panel .act button{flex:1;min-width:36px}
+.panel .reset{width:100%;padding:3px;font-size:9px;font-weight:600;background:rgba(220,80,80,.12);border-color:rgba(220,80,80,.3);margin-top:5px;color:#e08080}
+.panel .reset:hover{background:rgba(220,80,80,.22)}
+/* 滚动条 */
+.panel::-webkit-scrollbar{width:3px}
+.panel::-webkit-scrollbar-track{background:transparent}
+.panel::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:2px}
+</style></head><body>
+<canvas id="l2d"></canvas>
+
+<!-- ============ 左：vtube.json 物理控制 ============ -->
+<div id="panel-body" class="panel">
+  <h3 class="blue">身体控制 · vtube.json</h3>
+  <div class="row">
+    <input id="pid" placeholder="参数 ID" style="flex:2">
+    <input id="pval" placeholder="值" style="flex:.7">
+    <button onclick="p(pid.value,parseFloat(pval.value))">设</button>
+  </div>
+
+  <!-- 头部旋转 [ParamAngleX/Y/Z] OutputRange: ±30 -->
+  <h3>头部旋转</h3>
+  <label class="slider"><span class="name">摇头 X</span><input type="range" min="-30" max="30" step=".5" value="0" oninput="p('ParamAngleX',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">点头 Y</span><input type="range" min="-30" max="30" step=".5" value="0" oninput="p('ParamAngleY',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">歪头 Z</span><input type="range" min="-30" max="30" step=".5" value="0" oninput="p('ParamAngleZ',+v(this))"><span class="val">0</span></label>
+
+  <!-- 身体旋转 [ParamBodyAngleX/Y/Z] OutputRange: ±10 -->
+  <h3>身体旋转</h3>
+  <label class="slider"><span class="name">身体 X</span><input type="range" min="-10" max="10" step=".2" value="0" oninput="p('ParamBodyAngleX',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">身体 Y</span><input type="range" min="-10" max="10" step=".2" value="0" oninput="p('ParamBodyAngleY',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">身体 Z</span><input type="range" min="-10" max="10" step=".2" value="0" oninput="p('ParamBodyAngleZ',+v(this))"><span class="val">0</span></label>
+
+  <!-- 眼睛 -->
+  <h3>眼睛</h3>
+  <!-- ParamEyeLOpen/ROpen OutputRange: [0, 1.9] -->
+  <label class="slider"><span class="name">左眼开闭</span><input type="range" min="0" max="1.9" step=".05" value="1" oninput="p('ParamEyeLOpen',+v(this))"><span class="val">1</span></label>
+  <label class="slider"><span class="name">右眼开闭</span><input type="range" min="0" max="1.9" step=".05" value="1" oninput="p('ParamEyeROpen',+v(this))"><span class="val">1</span></label>
+  <!-- ParamEyeLSmile/RSmile OutputRange: [0, 1] -->
+  <label class="slider"><span class="name">微笑 L</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('ParamEyeLSmile',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">微笑 R</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('ParamEyeRSmile',+v(this))"><span class="val">0</span></label>
+  <!-- ParamEyeBallX OutputRange: [1,-1]（注意反向） -->
+  <label class="slider"><span class="name">眼球 X</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('ParamEyeBallX',+v(this))"><span class="val">0</span></label>
+  <!-- ParamEyeBallY OutputRange: [-1, 1] -->
+  <label class="slider"><span class="name">眼球 Y</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('ParamEyeBallY',+v(this))"><span class="val">0</span></label>
+  <!-- Param48 EyeOpenLeft→大眼 [0,1] -->
+  <label class="slider"><span class="name">大眼(48)</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param48',+v(this))"><span class="val">0</span></label>
+
+  <!-- 眉毛 -->
+  <h3>眉毛</h3>
+  <!-- ParamBrowLY/RY OutputRange: [-1, 1] -->
+  <label class="slider"><span class="name">眉上下 L</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('ParamBrowLY',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">眉上下 R</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('ParamBrowRY',+v(this))"><span class="val">0</span></label>
+  <!-- ParamBrowRForm/LForm OutputRange: [-1, 1] -->
+  <label class="slider"><span class="name">眉形 L</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('ParamBrowLForm',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">眉形 R</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('ParamBrowRForm',+v(this))"><span class="val">0</span></label>
+  <!-- Param47 Brows→眉形 [1,-1]（反向） -->
+  <label class="slider"><span class="name">眉形状(47)</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param47',+v(this))"><span class="val">0</span></label>
+
+  <!-- 嘴巴 -->
+  <h3>嘴巴</h3>
+  <!-- ParamMouthOpenY OutputRange: [0, 2.1] -->
+  <label class="slider"><span class="name">张嘴</span><input type="range" min="0" max="2.1" step=".05" value="0" oninput="p('ParamMouthOpenY',+v(this))"><span class="val">0</span></label>
+  <!-- ParamMouthForm OutputRange: [-1, 1] -->
+  <label class="slider"><span class="name">嘴形</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('ParamMouthForm',+v(this))"><span class="val">0</span></label>
+  <!-- Param122 MouthX→歪嘴 [-1, 1] -->
+  <label class="slider"><span class="name">歪嘴(122)</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param122',+v(this))"><span class="val">0</span></label>
+  <!-- Param123 MouthPucker→嘴宽 [-1, 1] -->
+  <label class="slider"><span class="name">嘴宽(123)</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param123',+v(this))"><span class="val">0</span></label>
+  <!-- Param124 MouthShrug→收下巴 [0, 1] -->
+  <label class="slider"><span class="name">收下巴(124)</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param124',+v(this))"><span class="val">0</span></label>
+  <!-- Param125 JawOpen→突下巴 [0, 1] -->
+  <label class="slider"><span class="name">突下巴(125)</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param125',+v(this))"><span class="val">0</span></label>
+  <!-- Param126 CheekPuff→鼓嘴 [0, 1] -->
+  <label class="slider"><span class="name">鼓嘴(126)</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param126',+v(this))"><span class="val">0</span></label>
+  <!-- Param23 MouthPressLipOpen [-1, 1] -->
+  <label class="slider"><span class="name">唇压(23)</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param23',+v(this))"><span class="val">0</span></label>
+
+  <!-- 呼吸 -->
+  <h3>其他</h3>
+  <!-- ParamBreath [0, 1] -->
+  <label class="slider"><span class="name">呼吸</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('ParamBreath',+v(this))"><span class="val">0</span></label>
+
+  <h3>动作</h3>
+  <div class="act">
+    <button onclick="model&&model.motion('Default',0)">动作1</button>
+    <button onclick="model&&model.motion('Default',1)">动作2</button>
+    <button onclick="model&&model.motion('Default',2)">动作3</button>
+  </div>
+  <button class="reset" onclick="resetAll()">全部重置</button>
+</div>
+
+<!-- ============ 右：cdi3.json 自定义外观 ============ -->
+<div id="panel-custom" class="panel">
+  <h3 class="blue">外观捏脸 · cdi3.json</h3>
+
+  <!-- 头发捏 ParamGroup3 -->
+  <h3>头发捏</h3>
+  <!-- Param20 刘海切换 / Param5 刘海长度 / Param140 刘海宽度 -->
+  <label class="slider"><span class="name">刘海切换</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param20',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">刘海长度</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param5',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">刘海宽度</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param140',+v(this))"><span class="val">0</span></label>
+  <!-- Param103 刘海R切换 / Param108 刘海L切换 -->
+  <label class="slider"><span class="name">刘海R切换</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param103',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">刘海L切换</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param108',+v(this))"><span class="val">0</span></label>
+  <!-- Param106 刘海R长度 / Param107 刘海L长度 -->
+  <label class="slider"><span class="name">刘海R长度</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param106',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">刘海L长度</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param107',+v(this))"><span class="val">0</span></label>
+  <!-- Param102 鬓角切换 / Param100/101 鬓角L/R长度 / Param136/135 鬓角L/R宽度 -->
+  <label class="slider"><span class="name">鬓角切换</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param102',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">鬓角L长度</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param100',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">鬓角R长度</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param101',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">鬓角L宽度</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param136',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">鬓角R宽度</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param135',+v(this))"><span class="val">0</span></label>
+  <!-- Param19 呆毛切换 -->
+  <label class="slider"><span class="name">呆毛切换</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param19',+v(this))"><span class="val">0</span></label>
+  <!-- Param209/211 L/R翘角 / Param210/212 L/R翘角位置 -->
+  <label class="slider"><span class="name">L翘角</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param209',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">R翘角</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param211',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">L翘角位置</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param210',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">R翘角位置</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param212',+v(this))"><span class="val">0</span></label>
+  <!-- Param117 后发切换 / Param118 后发长度外 / Param127 后发长度内 / Param132 后发变形 -->
+  <label class="slider"><span class="name">后发切换</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param117',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">后发长度外</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param118',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">后发长度内</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param127',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">后发变形</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param132',+v(this))"><span class="val">0</span></label>
+  <!-- Param131/134 L/R辫子 / Param166/133 辫子L/R位置 / Param167/165 辫子L/R长度 -->
+  <label class="slider"><span class="name">L辫子</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param131',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">R辫子</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param134',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">辫子L位置</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param166',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">辫子R位置</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param133',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">辫子L长度</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param167',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">辫子R长度</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param165',+v(this))"><span class="val">0</span></label>
+  <!-- Param194 挑染 -->
+  <label class="slider"><span class="name">挑染</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param194',+v(this))"><span class="val">0</span></label>
+  <!-- Param156 水印关闭 -->
+  <label class="slider"><span class="name">水印关闭</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param156',+v(this))"><span class="val">0</span></label>
+
+  <!-- 脸型捏 ParamGroup16 -->
+  <h3>脸型捏</h3>
+  <!-- Param138 脸宽窄 / Param139 下巴上下 -->
+  <label class="slider"><span class="name">脸宽窄</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param138',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">下巴上下</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param139',+v(this))"><span class="val">0</span></label>
+
+  <!-- 眼睛捏 ParamGroup18 -->
+  <h3>眼睛捏</h3>
+  <!-- Param39 眼形 / Param56 眼睛大小 / Param86 眼睛上下 / Param155 眼球宽度 -->
+  <label class="slider"><span class="name">眼形</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param39',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">眼睛大小</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param56',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">眼睛上下</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param86',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">眼球宽度</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param155',+v(this))"><span class="val">0</span></label>
+  <!-- Param41 睫毛 / Param49 下眼睑 -->
+  <label class="slider"><span class="name">睫毛</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param41',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">下眼睑</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param49',+v(this))"><span class="val">0</span></label>
+  <!-- Param36/38 L/R瞳孔 -->
+  <label class="slider"><span class="name">L瞳孔</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param36',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">R瞳孔</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param38',+v(this))"><span class="val">0</span></label>
+  <!-- Param42/43 L/R白眼 -->
+  <label class="slider"><span class="name">L白眼</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param42',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">R白眼</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param43',+v(this))"><span class="val">0</span></label>
+  <!-- Param55/178 L/R高光 -->
+  <label class="slider"><span class="name">L高光</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param55',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">R高光</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param178',+v(this))"><span class="val">0</span></label>
+  <!-- Param189/188 高光L/R位置 -->
+  <label class="slider"><span class="name">高光L位置</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param189',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">高光R位置</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param188',+v(this))"><span class="val">0</span></label>
+
+  <!-- 口鼻捏 ParamGroup17 -->
+  <h3>口鼻捏</h3>
+  <!-- Param2 猫猫嘴 -->
+  <label class="slider"><span class="name">猫猫嘴</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param2',+v(this))"><span class="val">0</span></label>
+  <!-- Param96 嘴巴上下 / Param97 嘴巴宽窄 -->
+  <label class="slider"><span class="name">嘴巴上下</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param96',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">嘴巴宽窄</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param97',+v(this))"><span class="val">0</span></label>
+  <!-- Param6 鼻子切换 / Param87 鼻子上下 -->
+  <label class="slider"><span class="name">鼻子切换</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param6',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">鼻子上下</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param87',+v(this))"><span class="val">0</span></label>
+  <!-- Param71 牙切换 -->
+  <label class="slider"><span class="name">牙切换</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param71',+v(this))"><span class="val">0</span></label>
+
+  <!-- 眉毛捏 ParamGroup19 -->
+  <h3>眉毛捏</h3>
+  <!-- Param57 眉毛样式 / Param69 眉毛旋转 / Param81 眉毛上下 / Param82 眉毛宽窄 -->
+  <label class="slider"><span class="name">眉毛样式</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param57',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">眉毛旋转</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param69',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">眉毛上下</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param81',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">眉毛宽窄</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param82',+v(this))"><span class="val">0</span></label>
+
+  <!-- 痣 ParamGroup9 -->
+  <h3>痣 · 脸上</h3>
+  <!-- Param72 痣1 / Param141/142 痣1 X/Y / Param144 痣2 / Param145/146 痣2 X/Y -->
+  <label class="slider"><span class="name">痣1</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param72',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">痣1 X</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param141',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">痣1 Y</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param142',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">痣2</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param144',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">痣2 X</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param145',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">痣2 Y</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param146',+v(this))"><span class="val">0</span></label>
+  <!-- Param147 雀斑 -->
+  <label class="slider"><span class="name">雀斑</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param147',+v(this))"><span class="val">0</span></label>
+  <!-- Param74 腮红样式 / Param187 腮红上下 -->
+  <label class="slider"><span class="name">腮红样式</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param74',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">腮红上下</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param187',+v(this))"><span class="val">0</span></label>
+  <!-- Param73/205 脸上装饰1/2 -->
+  <label class="slider"><span class="name">脸饰1</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param73',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">脸饰2</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param205',+v(this))"><span class="val">0</span></label>
+  <!-- Param153 眼镜样式 / Param154 眼镜上下 -->
+  <label class="slider"><span class="name">眼镜样式</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param153',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">眼镜上下</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param154',+v(this))"><span class="val">0</span></label>
+
+  <!-- 头上捏 ParamGroup8 -->
+  <h3>头上捏</h3>
+  <!-- Param128/204 头上装饰1/2 / Param208 头后 -->
+  <label class="slider"><span class="name">头饰1</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param128',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">头饰2</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param204',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">头后装饰</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param208',+v(this))"><span class="val">0</span></label>
+  <!-- Param152 角 / Param179 角长度 / Param199 角2长度 -->
+  <label class="slider"><span class="name">角</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param152',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">角长度</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param179',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">角2长度</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param199',+v(this))"><span class="val">0</span></label>
+  <!-- Param109 耳朵切换 / Param151 兽耳 / Param180 兽耳长度 / Param181/182 L/R兽耳位置 -->
+  <label class="slider"><span class="name">耳朵切换</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param109',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">兽耳</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param151',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">兽耳长度</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param180',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">L兽耳位置</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param181',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">R兽耳位置</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param182',+v(this))"><span class="val">0</span></label>
+  <!-- Param148/149 L/R发卡 -->
+  <label class="slider"><span class="name">L发卡</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param148',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">R发卡</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param149',+v(this))"><span class="val">0</span></label>
+  <!-- Param130/196 特殊部件1/2 -->
+  <label class="slider"><span class="name">特殊部件1</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param130',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">特殊部件2</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param196',+v(this))"><span class="val">0</span></label>
+
+  <!-- 身上捏 ParamGroup20 -->
+  <h3>身体捏</h3>
+  <!-- Param50 校徽样式 / Param157 裙子长 / Param137 衣服样式 / Param192 短裤样式 -->
+  <label class="slider"><span class="name">校徽样式</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param50',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">裙子长</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param157',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">衣服样式</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param137',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">短裤样式</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param192',+v(this))"><span class="val">0</span></label>
+
+  <!-- 眼睛 ParamGroup11（动态表情） -->
+  <h3>眼睛表情</h3>
+  <!-- Param17/18 怒(L/R) -->
+  <label class="slider"><span class="name">怒L</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param17',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">怒R</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param18',+v(this))"><span class="val">0</span></label>
+  <!-- Param30/31 左/右眼皮 -->
+  <label class="slider"><span class="name">左眼皮</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param30',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">右眼皮</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param31',+v(this))"><span class="val">0</span></label>
+  <!-- Param184/185 痣左/右眼开闭 -->
+  <label class="slider"><span class="name">痣L眼开闭</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param184',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">痣R眼开闭</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param185',+v(this))"><span class="val">0</span></label>
+  <!-- Param190/191 微笑L/R -->
+  <label class="slider"><span class="name">微笑形L</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param190',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">微笑形R</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param191',+v(this))"><span class="val">0</span></label>
+  <!-- Param70 脸距 -->
+  <label class="slider"><span class="name">脸距(70)</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param70',+v(this))"><span class="val">0</span></label>
+
+  <!-- 嘴巴 ParamGroup7 -->
+  <h3>嘴巴表情</h3>
+  <!-- Param186/183 痣嘴巴变形/开合 -->
+  <label class="slider"><span class="name">痣嘴变形</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param186',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">痣嘴开合</span><input type="range" min="0" max="1" step=".05" value="0" oninput="p('Param183',+v(this))"><span class="val">0</span></label>
+
+  <!-- 手 ParamGroup4 -->
+  <h3>手</h3>
+  <!-- Param61/62 左/右手 / Param63/64 旋转 / Param98/99/104/105 变形 -->
+  <label class="slider"><span class="name">左手</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param61',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">右手</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param62',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">左手旋转</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param63',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">右手旋转</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param64',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">左手变形1</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param98',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">左手变形2</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param99',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">右手变形1</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param104',+v(this))"><span class="val">0</span></label>
+  <label class="slider"><span class="name">右手变形2</span><input type="range" min="-1" max="1" step=".05" value="0" oninput="p('Param105',+v(this))"><span class="val">0</span></label>
+</div>
+
+<script src="/live2d/model/live2dcubismcore.min.js"></script>
+<script src="/live2d/model/pixi.min.js"></script>
+<script src="/live2d/model/pixi-live2d-cubism4.min.js"></script>
+<script>
+function v(e){
+  var val=(+e.value).toFixed(2);
+  e.parentNode.querySelector('.val').textContent=val;
+  return val;
+}
+
+var app,model,cm;
+
+app=new PIXI.Application({
+  view:document.getElementById('l2d'),
+  transparent:true,
+  width:window.innerWidth-460,
+  height:window.innerHeight,
+  backgroundAlpha:0,
+  antialias:true,
+  resolution:1,
+  autoDensity:true
+});
+
+PIXI.live2d.Live2DModel.from('/live2d/model/resources/MO/MO.model3.json',{autoInteract:false}).then(function(m){
+  model=m; cm=model.internalModel.coreModel;
+  var cw=window.innerWidth-460, ch=window.innerHeight;
+  var s=Math.min(ch/model.height,cw/model.width)*2.0;
+  model.scale.set(s);
+  model.anchor.set(0.5,0.5);
+  model.x=cw/2; model.y=ch*.65;
+  app.stage.addChild(model);
+  window.model=model; window.cm=cm;
+
+  window.p=function(id,val){
+    try{
+      var fv=parseFloat(val);
+      cm.setParameterValueById(id,fv);
+      var r=cm.getParameterValueById(id);
+      console.log(id+' set:'+fv.toFixed(2)+' read:'+r.toFixed(3));
+    }catch(e){console.error(id,e);}
+  };
+
+  window.resetAll=function(){
+    // vtube.json 物理参数重置
+    p('ParamAngleX',0);p('ParamAngleY',0);p('ParamAngleZ',0);
+    p('ParamBodyAngleX',0);p('ParamBodyAngleY',0);p('ParamBodyAngleZ',0);
+    p('ParamEyeLOpen',1);p('ParamEyeROpen',1);
+    p('ParamEyeLSmile',0);p('ParamEyeRSmile',0);
+    p('ParamEyeBallX',0);p('ParamEyeBallY',0);
+    p('ParamMouthOpenY',0);p('ParamMouthForm',0);
+    p('ParamBrowLY',0);p('ParamBrowRY',0);p('ParamBrowLForm',0);p('ParamBrowRForm',0);
+    p('ParamBreath',0);
+    p('Param47',0);p('Param48',0);
+    p('Param122',0);p('Param123',0);p('Param124',0);p('Param125',0);p('Param126',0);p('Param23',0);
+    // 重置所有 range 滑块 UI
+    document.querySelectorAll('input[type=range]').forEach(function(e){
+      e.value=e.defaultValue;
+      e.dispatchEvent(new Event('input'));
+    });
+  };
+});
+
+window.addEventListener('resize',function(){
+  if(!model)return;
+  var cw=window.innerWidth-460,ch=window.innerHeight;
+  app.renderer.resize(cw,ch);
+  var s=Math.min(ch/model.height,cw/model.width)*2.0;
+  model.scale.set(s);
+  model.x=cw/2; model.y=ch*.65;
+});
+
+// ====================== 情绪 + 口型同步系统 ======================
+var _state = {
+  emotion: 'neutral',
+  intensity: 0.3,
+  speaking: false,
+  speak_duration: 0,
+  _speak_id: 0,
+  tts_audio_url: '',
+  phonemes: [],
+  _pending_motion: ''
+};
+var _lipSync = {
+  active: false,
+  startTime: 0,
+  phonemes: [],
+  currentIdx: 0,
+  speakId: 0
+};
+var _emotionParams = {
+  emotion: 'neutral',
+  intensity: 0.3,
+  params: {}
+};
+
+// 韵母分类 → 张嘴程度
+var VOWEL_MOUTH_OPEN = {
+  'a': 0.8, 'o': 0.5, 'e': 0.3, 'i': 0.2, 'u': 0.4, 'default': 0.3
+};
+
+// 情绪参数映射
+var EMOTION_PARAM_MAP = {
+  'neutral': {
+    '0.0': {ParamMouthOpenY:0, ParamEyeLOpen:1, ParamEyeROpen:1, ParamBrowLY:0, ParamBrowRY:0, ParamBrowLForm:0, ParamBrowRForm:0, ParamMouthForm:0},
+    '0.3': {ParamMouthOpenY:0, ParamEyeLOpen:1, ParamEyeROpen:1, ParamBrowLY:0, ParamBrowRY:0, ParamBrowLForm:0, ParamBrowRForm:0, ParamMouthForm:0.3},
+    '0.6': {ParamMouthOpenY:0, ParamEyeLOpen:1.2, ParamEyeROpen:1.2, ParamBrowLY:0.3, ParamBrowRY:0.3, ParamBrowLForm:0, ParamBrowRForm:0, ParamMouthForm:0.5},
+    '1.0': {ParamMouthOpenY:0, ParamEyeLOpen:1.5, ParamEyeROpen:1.5, ParamBrowLY:0.5, ParamBrowRY:0.5, ParamBrowLForm:0, ParamBrowRForm:0, ParamMouthForm:0.7}
+  },
+  'happy': {
+    '0.0': {ParamMouthOpenY:0, ParamEyeLOpen:1, ParamEyeROpen:1, ParamBrowLY:0, ParamBrowRY:0, ParamBrowLForm:0, ParamBrowRForm:0, ParamMouthForm:0},
+    '0.3': {ParamMouthOpenY:0, ParamEyeLOpen:0.9, ParamEyeROpen:0.9, ParamBrowLY:0.2, ParamBrowRY:0.2, ParamBrowLForm:0, ParamBrowRForm:0, ParamMouthForm:0.5},
+    '0.6': {ParamMouthOpenY:0.2, ParamEyeLOpen:0.6, ParamEyeROpen:0.6, ParamBrowLY:0.5, ParamBrowRY:0.5, ParamBrowLForm:-0.2, ParamBrowRForm:-0.2, ParamMouthForm:1.0},
+    '1.0': {ParamMouthOpenY:0.4, ParamEyeLOpen:0.3, ParamEyeROpen:0.3, ParamBrowLY:0.8, ParamBrowRY:0.8, ParamBrowLForm:-0.3, ParamBrowRForm:-0.3, ParamMouthForm:1.0}
+  },
+  'sad': {
+    '0.0': {ParamMouthOpenY:0, ParamEyeLOpen:1, ParamEyeROpen:1, ParamBrowLY:0, ParamBrowRY:0, ParamBrowLForm:0, ParamBrowRForm:0, ParamMouthForm:0},
+    '0.3': {ParamMouthOpenY:0, ParamEyeLOpen:0.8, ParamEyeROpen:0.8, ParamBrowLY:-0.3, ParamBrowRY:-0.3, ParamBrowLForm:0.3, ParamBrowRForm:0.3, ParamMouthForm:-0.3},
+    '0.6': {ParamMouthOpenY:0, ParamEyeLOpen:0.5, ParamEyeROpen:0.5, ParamBrowLY:-0.6, ParamBrowRY:-0.6, ParamBrowLForm:0.5, ParamBrowRForm:0.5, ParamMouthForm:-0.6},
+    '1.0': {ParamMouthOpenY:0, ParamEyeLOpen:0.3, ParamEyeROpen:0.3, ParamBrowLY:-1.0, ParamBrowRY:-1.0, ParamBrowLForm:0.8, ParamBrowRForm:0.8, ParamMouthForm:-1.0}
+  },
+  'angry': {
+    '0.0': {ParamMouthOpenY:0, ParamEyeLOpen:1, ParamEyeROpen:1, ParamBrowLY:0, ParamBrowRY:0, ParamBrowLForm:0, ParamBrowRForm:0, ParamMouthForm:0},
+    '0.3': {ParamMouthOpenY:0, ParamEyeLOpen:1, ParamEyeROpen:1, ParamBrowLY:-0.4, ParamBrowRY:-0.4, ParamBrowLForm:0.5, ParamBrowRForm:0.5, ParamMouthForm:-0.3},
+    '0.6': {ParamMouthOpenY:0, ParamEyeLOpen:1.2, ParamEyeROpen:1.2, ParamBrowLY:-0.7, ParamBrowRY:-0.7, ParamBrowLForm:0.8, ParamBrowRForm:0.8, ParamMouthForm:-0.5},
+    '1.0': {ParamMouthOpenY:0.3, ParamEyeLOpen:1.5, ParamEyeROpen:1.5, ParamBrowLY:-1.0, ParamBrowRY:-1.0, ParamBrowLForm:1.0, ParamBrowRForm:1.0, ParamMouthForm:-0.8}
+  },
+  'surprised': {
+    '0.0': {ParamMouthOpenY:0, ParamEyeLOpen:1, ParamEyeROpen:1, ParamBrowLY:0, ParamBrowRY:0, ParamBrowLForm:0, ParamBrowRForm:0, ParamMouthForm:0},
+    '0.3': {ParamMouthOpenY:0.3, ParamEyeLOpen:1.3, ParamEyeROpen:1.3, ParamBrowLY:0.3, ParamBrowRY:0.3, ParamBrowLForm:0, ParamBrowRForm:0, ParamMouthForm:0},
+    '0.6': {ParamMouthOpenY:0.6, ParamEyeLOpen:1.6, ParamEyeROpen:1.6, ParamBrowLY:0.6, ParamBrowRY:0.6, ParamBrowLForm:-0.2, ParamBrowRForm:-0.2, ParamMouthForm:0.3},
+    '1.0': {ParamMouthOpenY:1.0, ParamEyeLOpen:1.9, ParamEyeROpen:1.9, ParamBrowLY:1.0, ParamBrowRY:1.0, ParamBrowLForm:-0.3, ParamBrowRForm:-0.3, ParamMouthForm:0.5}
+  }
+};
+
+// 应用情绪表情
+function applyEmotion(emotion, intensity) {
+  if (!model) return;
+  var level = intensity < 0.15 ? '0.0' : intensity < 0.45 ? '0.3' : intensity < 0.85 ? '0.6' : '1.0';
+  var params = (EMOTION_PARAM_MAP[emotion] || EMOTION_PARAM_MAP['neutral'])[level];
+  if (!params) return;
+  
+  // 不覆盖 ParamMouthOpenY（说话时由口型同步控制）
+  var mouthY = params.ParamMouthOpenY;
+  delete params.ParamMouthOpenY;
+  
+  for (var k in params) {
+    p(k, params[k]);
+  }
+  
+  // 如果不在说话，才设置嘴巴
+  if (!_lipSync.active && model) {
+    p('ParamMouthOpenY', mouthY);
+  }
+  
+  _emotionParams = {emotion: emotion, intensity: intensity, params: params};
+  console.log('[Emotion]', emotion, intensity, '→', level);
+}
+
+// 开始口型同步
+function startLipSync(phonemes, duration, speakId) {
+  if (!phonemes || phonemes.length === 0) return;
+  _lipSync = {
+    active: true,
+    startTime: performance.now(),
+    phonemes: phonemes,
+    currentIdx: 0,
+    speakId: speakId || Date.now()
+  };
+  console.log('[LipSync] Start', phonemes.length, 'phonemes, duration:', duration, 'ms');
+}
+
+// 停止口型同步
+function stopLipSync() {
+  _lipSync.active = false;
+  _lipSync.currentIdx = 0;
+  // 恢复情绪表情
+  if (_emotionParams.emotion) {
+    applyEmotion(_emotionParams.emotion, _emotionParams.intensity);
+  }
+}
+
+// 口型同步更新（每帧调用）
+function updateLipSync() {
+  if (!_lipSync.active || !_lipSync.phonemes.length || !model) return;
+  
+  var elapsed = performance.now() - _lipSync.startTime;
+  var phonemes = _lipSync.phonemes;
+  var idx = _lipSync.currentIdx;
+  
+  // 找到当前音素
+  while (idx < phonemes.length && phonemes[idx].e < elapsed) {
+    idx++;
+  }
+  _lipSync.currentIdx = idx;
+  
+  if (idx >= phonemes.length) {
+    // 所有音素结束
+    stopLipSync();
+    return;
+  }
+  
+  var ph = phonemes[idx];
+  if (elapsed >= ph.s) {
+    // 在当前音素时间窗口内
+    var vowelClass = ph['class'] || 'default';
+    var mouthOpen = VOWEL_MOUTH_OPEN[vowelClass] || 0.3;
+    // 添加一点随机性，让口型更自然
+    var variance = (Math.random() - 0.5) * 0.15;
+    p('ParamMouthOpenY', Math.max(0, Math.min(2.1, mouthOpen + variance)));
+  }
+}
+
+// 轮询 /pet/status
+var POLL_INTERVAL = 50; // 50ms 轮询
+var lastSpeakId = 0;
+
+function pollStatus() {
+  fetch('/pet/status').then(function(res) {
+    return res.json();
+  }).then(function(data) {
+    _state = data;
+    
+    // 检测新的说话请求
+    if (data._speak_id && data._speak_id !== lastSpeakId) {
+      lastSpeakId = data._speak_id;
+      if (data.phonemes && data.phonemes.length > 0) {
+        startLipSync(data.phonemes, data.speak_duration, data._speak_id);
+      }
+    }
+    
+    // 情绪变化
+    if (data.emotion && (data.emotion !== _emotionParams.emotion || data.intensity !== _emotionParams.intensity)) {
+      applyEmotion(data.emotion, data.intensity);
+    }
+    
+    // 动作请求
+    if (data._pending_motion && model) {
+      model.motion(data._pending_motion, 0);
+      _state._pending_motion = '';
+    }
+  }).catch(function(e) {
+    // 静默失败，继续轮询
+  });
+}
+
+// 每帧更新
+function tick() {
+  updateLipSync();
+  requestAnimationFrame(tick);
+}
+
+// 启动轮询和动画循环
+setInterval(pollStatus, POLL_INTERVAL);
+requestAnimationFrame(tick);
+
+console.log('[Live2D] Emotion + LipSync system initialized');
+</script></body></html>
