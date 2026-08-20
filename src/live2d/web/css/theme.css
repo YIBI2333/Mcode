@@ -1,0 +1,170 @@
+/* ============================================================
+ * theme.css — 全局设计令牌 + 跨面板共享基础
+ *
+ * 颜色值严格沿用项目历史调色板，仅把"硬编码"抽成"语义化变量"。
+ * 所有面板 <link rel="stylesheet" href="/model/css/theme.css"> 引入。
+ * 面板私有样式仍写在各自 HTML <style> 或专属 css 内，但应全部改用这些令牌。
+ * ============================================================ */
+
+:root {
+  /* ── 调色板：背景层级 ── */
+  --bg-deep:   #11111b;   /* 最深：标题栏 / 输入栏 / 文件条 */
+  --bg-base:   #181825;   /* body 默认背景 */
+  --bg-soft:   #1a1d27;   /* 弹窗容器 */
+  --bg-elev:   #2a1f3d;   /* AI 气泡 */
+  --bg-user:   #1e3a5f;   /* 用户气泡 */
+
+  /* ── 边框 ── */
+  --border:        rgba(255, 255, 255, 0.10);
+  --border-soft:   rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.15);
+
+  /* ── 文本 ── */
+  --text:      #e6e0f5;
+  --text-soft: #bbb8d0;
+  --text-mute: #8b8aaa;
+  --text-dim:  #a0b8d0;
+
+  /* ── 强调色 ── */
+  --accent:       #7b5ea7;   /* AI 边框 */
+  --accent-hi:    #7b6bc0;   /* 输入框聚焦 */
+  --accent-text:  #c4a0ff;
+  --user-accent:  #3b7ec7;
+  --user-text:    #d6eaff;
+
+  /* ── 状态色 ── */
+  --status:    #a8c0e0;
+  --info:      #5b9eff;
+  --ok:        #4fe382;
+  --warn:      #fc0;
+  --danger:    #ff7b7b;
+  --danger-bg: #ff5e5e;
+
+  /* ── 工具调用样式 ── */
+  --tool-bg:     rgba(30, 40, 60, 0.70);
+  --tool-border: rgba(90, 120, 160, 0.25);
+  --tool-text:   #a0b8d0;
+  --tool-result-text: #9eb8a0;
+
+  /* ── 圆角 ── */
+  --r-sm:  4px;
+  --r-md:  8px;
+  --r-lg:  12px;
+  --r-xl:  16px;
+  --r-pill: 20px;
+
+  /* ── 间距 ── */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+
+  /* ── 字体 ── */
+  --font-sans: "Microsoft YaHei", "PingFang SC", sans-serif;
+  --font-mono: "Cascadia Code", "JetBrains Mono", "Fira Code", "Consolas", monospace;
+
+  /* ── 阴影 ── */
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
+
+  /* ── 过渡 ── */
+  --t-fast: 0.15s;
+  --t-def:  0.25s;
+}
+
+/* ============================================================
+ * 全局基础
+ * ============================================================ */
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg-base);
+  color: var(--text);
+  font: 14px/1.65 var(--font-sans);
+  box-sizing: border-box;
+}
+*, *::before, *::after { box-sizing: border-box; }
+
+/* ============================================================
+ * 滚动条
+ * ============================================================ */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.08); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.14); }
+
+/* ============================================================
+ * 通用按钮 — 标题栏小按钮
+ * 用于 chat / settings / task / expression 等面板标题栏
+ * ============================================================ */
+.title-btn {
+  width: 30px; height: 30px;
+  border-radius: var(--r-md);
+  border: none; background: transparent;
+  color: var(--text-mute);
+  font-size: 15px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--t-fast);
+}
+.title-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e8e4f8;
+}
+.title-btn.close:hover {
+  background: rgba(255, 72, 72, 0.25);
+  color: var(--danger-bg);
+}
+
+/* ============================================================
+ * 状态指示灯（streaming/connected/error/paused）
+ * 用法: <span id="status-dot" class="streaming"></span>
+ * ============================================================ */
+.status-dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  margin-right: var(--sp-2);
+  background: var(--warn);
+  vertical-align: middle;
+}
+.status-dot.connected { background: var(--ok); }
+.status-dot.streaming { background: var(--info); animation: status-pulse 0.7s infinite; }
+.status-dot.error     { background: #ff4d4d; }
+.status-dot.paused    { background: var(--accent); }
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px var(--info); }
+  50%      { opacity: 0.3; box-shadow: 0 0 1px var(--info); }
+}
+
+/* ============================================================
+ * 浮层遮罩（灯箱 / 工具详情 / 设置弹窗等）
+ * ============================================  ============== */
+.overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 999;
+  align-items: center; justify-content: center;
+}
+.overlay.show { display: flex; }
+
+/* 图片灯箱简写 */
+.lightbox { background: rgba(0, 0, 0, 0.9); cursor: pointer; }
+.lightbox img { max-width: 95%; max-height: 95%; object-fit: contain; border-radius: var(--r-sm); }
+
+/* ============================================================
+ * 通用文件 chip（chat 上传条、后续可复用于其它面板）
+ * ============================================================ */
+.file-chip {
+  display: inline-flex; align-items: center; gap: var(--sp-1);
+  padding: 3px var(--sp-2);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  font-size: 11px; color: var(--text-soft);
+  max-width: 180px;
+}
+.file-chip img { height: 20px; width: auto; border-radius: 3px; }
+.file-chip .chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.file-chip .chip-remove { cursor: pointer; color: var(--text-mute); font-size: 13px; line-height: 1; margin-left: 2px; }
+.file-chip .chip-remove:hover { color: var(--danger); }

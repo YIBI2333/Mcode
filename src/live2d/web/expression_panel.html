@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live2D Parameter Panel</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#1a1a2e;font:12px "Microsoft YaHei","PingFang SC",sans-serif;color:#e0d8f0}
+#bar{height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;background:#11111b;border-bottom:1px solid rgba(255,255,255,0.1);-webkit-app-region:drag}
+#bar span{font-size:13px;font-weight:600;color:#bbb8d0}
+#bar div{display:flex;gap:4px;-webkit-app-region:no-drag}
+.bn{width:28px;height:28px;border-radius:6px;border:none;background:transparent;color:#8b8aaa;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.bn:hover{background:rgba(255,255,255,0.08)}
+.bn.c:hover{background:rgba(255,72,72,0.25);color:#ff5e5e}
+#s{height:calc(100% - 36px);overflow-y:auto;padding:8px 10px}
+#s::-webkit-scrollbar{width:4px}
+#s::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+.t{margin:8px 0}
+.tt{font-size:11px;font-weight:700;color:#7b6bc0;padding:3px 0;border-bottom:1px solid rgba(124,108,192,0.2);margin-bottom:4px}
+.r{display:flex;align-items:center;gap:6px;margin:2px 0;padding:2px 4px;border-radius:3px}
+.r:hover{background:rgba(255,255,255,0.03)}
+.r.on{border-left:2px solid rgba(76,175,80,0.5);background:rgba(76,175,80,0.06)}
+.r label{width:100px;font-size:11px;color:#c0b8e0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.r .pid{width:70px;font-size:9px;color:#7b8aaa;font-family:monospace}
+.r input[type=range]{flex:1;accent-color:#7b6bc0;height:3px}
+.r .nv{width:52px;font-size:10px;font-family:monospace;text-align:right;color:#e0d8f0}
+.r button{width:40px;font-size:10px;padding:2px 0;border-radius:3px;border:1px solid rgba(255,255,255,0.15);cursor:pointer;background:rgba(255,255,255,0.05);color:#c0b8e0}
+.r button.on{background:rgba(76,175,80,0.3);border-color:#4caf50;color:#a5d6a7}
+.r button.off{background:rgba(244,67,54,0.2);border-color:#f44336;color:#ef9a9a}
+.btns{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}
+.bt{padding:4px 10px;border-radius:4px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:#e0d8f0;font-size:11px;cursor:pointer}
+.bt:hover{background:rgba(255,255,255,0.12)}
+.bt.p{background:rgba(123,107,192,0.25);border-color:rgba(123,107,192,0.4)}
+.nt{font-size:10px;color:#8b7aaa;margin:2px 0 6px;padding:3px 6px;background:rgba(255,255,255,0.03);border-radius:3px;border-left:2px solid #7b6bc0}
+</style>
+</head>
+<body>
+<div id="bar"><span>Live2D Parameter Panel</span><div id="acts"><button class="bn" id="mn" title="minimize">−</button><button class="bn" id="mx" title="maximize">□</button><button class="bn c" id="cx" title="close">✕</button></div></div>
+<div id="s">
+<div class="btns">
+<button class="bt" id="all-on">全部启用</button>
+<button class="bt" id="all-off">全部停用</button>
+<button class="bt p" id="apply-exp">套用预设</button>
+<button class="bt" id="blink-toggle" style="border-color:rgba(76,175,80,0.5);background:rgba(76,175,80,0.2)">👁 自动眨眼: ON</button>
+<button class="bt" </div>
+<div class="nt" id="nt">每个参数可独立开关。开启=设为预设值，关闭=归零。* = exp3预设中有值。</div>
+<div id="ct"></div>
+</div>
+<script>
+var S=window.agentShell||{setPetParam:function(){},setPetMultiParams:function(){},closeExpressionPanel:function(){},getCustomParams:function(){return Promise.resolve({})},minimizeWindow:function(){},toggleMaximize:function(){}};
+var expVals={"Param156": 1.0, "Param20": 3.28895902633667, "Param5": 0.7999999523162842, "Param140": 1.0, "Param103": 1.5, "Param108": 1.5, "Param106": 0.5, "Param107": 0.5, "Param209": 1.0, "Param211": 1.0, "Param210": 0.5, "Param212": 0.5, "Param100": 1.0, "Param101": 1.0, "Param136": 1.0, "Param135": 1.0, "Param19": 5.0, "Param117": 0.0, "Param118": 0.7999999523162842, "Param127": 1.0, "Param132": 1.0, "Param131": 0.0, "Param138": 0.7000000476837158, "Param139": 0.0, "Param39": -0.8999999761581421, "Param56": 0.2999999523162842, "Param155": 1.0, "Param41": 3.0, "Param49": 1.0, "Param36": 1.0, "Param38": 1.0, "Param42": 0.6000000238418579, "Param43": 0.6000000238418579, "Param55": 3.0, "Param178": 3.0, "Param6": 1.0, "Param87": 0.7999999523162842, "Param57": 0.0, "Param69": 0.2976430654525757, "Param81": 0.6895403861999512, "Param74": 5.0, "Param187": 1.0, "Param151": 1.0, "Param180": 0.0, "Param181": -0.10000002384185791, "Param182": -0.10000002384185791, "Param148": 4.0, "Param50": 2.956587076187134, "Param157": 1.0, "Param192": 0.0};
+var sections={  "头发捏": [
+    ["Param156","水印关闭Watermark off",0,3,0.1],
+    ["Param176","本模型由樱井檬免费公开",0,3,0.1],
+    ["Param177","禁止二次转卖",0,3,0.1],
+    ["Param193","Prohibition of secondary resale",0,3,0.1],
+    ["Param20","刘海切换Style of bangs",0,5,0.1],
+    ["Param5","刘海长度Length of bangs",0,3,0.1],
+    ["Param140","刘海宽度Width of bangs",0,3,0.1],
+    ["Param103","刘海R切换Style of right bangs",0,5,0.1],
+    ["Param108","刘海L切换Style of left bangs",0,5,0.1],
+    ["Param106","刘海R长度Length of right bangs",0,3,0.1],
+    ["Param107","刘海L长度Length of left bangs",0,3,0.1],
+    ["Param102","鬓角切换Style of temples",0,5,0.1],
+    ["Param209","L翘角 Left Cocked hair",0,3,0.1],
+    ["Param211","R翘角 Right Cocked hair",0,3,0.1],
+    ["Param210","L翘角位置Position of left Cocked hair",-2,2,0.1],
+    ["Param212","R翘角位置Position of left Cocked hair",-2,2,0.1],
+    ["Param100","鬓角L长度Length of left temples",0,3,0.1],
+    ["Param101","鬓角R长度Length of right temples",0,3,0.1],
+    ["Param136","鬓角L宽度Width of left temples",0,3,0.1],
+    ["Param135","鬓角R宽度Width of right temples",0,3,0.1],
+    ["Param19","呆毛切换Style of ahoge",0,5,0.1],
+    ["Param117","后发切换Style of back hair",0,5,0.1],
+    ["Param118","后发长度外Length of back hair （outer）",0,3,0.1],
+    ["Param127","后发长度内Length of back hair （inner）",0,3,0.1],
+    ["Param132","后发变形Shape of back hair",0,3,0.1],
+    ["Param131","L辫子Left braid",0,3,0.1],
+    ["Param134","R辫子Right braid",0,3,0.1],
+    ["Param166","辫子L位置Position of left braid",-2,2,0.1],
+    ["Param133","辫子R位置Position of right braid",-2,2,0.1],
+    ["Param167","辫子L长度Length of left braid",0,3,0.1],
+    ["Param165","辫子R长度Length of right braid",0,3,0.1],
+    ["Param194","挑染streaked hair",0,3,0.1],
+  ],
+  "脸型捏": [
+    ["Param138","脸宽窄Face width",0,3,0.1],
+    ["Param139","下巴上下Chin position(up&down)",-2,2,0.1],
+  ],
+  "眼睛捏": [
+    ["Param39","眼形Eye shape",0,3,0.1],
+    ["Param56","眼睛大小Eye size",0,3,0.1],
+    ["Param86","眼睛上下Eye position",-1,1,0.05],
+    ["Param155","眼球宽度Eyeball width",0,3,0.1],
+    ["Param41","睫毛Eyelashes",0,3,0.1],
+    ["Param49","眼（下）Lower eyelid",0,3,0.1],
+    ["Param36","L瞳孔Left pupil",0,3,0.1],
+    ["Param38","R瞳孔Right pupil",0,3,0.1],
+    ["Param42","L白眼Left eyes white",0,3,0.1],
+    ["Param43","R白眼Right eyes white",0,3,0.1],
+    ["Param55","L高光Left highlight",0,3,0.1],
+    ["Param178","R高光Right highlight",0,3,0.1],
+    ["Param189","高光L位置Position of left highlight",-2,2,0.1],
+    ["Param188","高光R位置Position of right highlight",-2,2,0.1],
+  ],
+  "五官捏": [
+    ["Param2","猫猫嘴切换Cat mouth",0,5,0.1],
+    ["Param96","嘴巴上下Mouth position",-2,2,0.1],
+    ["Param97","嘴巴宽窄Mouth width",0,3,0.1],
+    ["Param6","鼻子切换Nose shape",0,5,0.1],
+    ["Param87","鼻子上下Nose position",-2,2,0.1],
+    ["Param71","牙切换(普通嘴)The style of teeth",0,5,0.1],
+  ],
+  "眉毛捏": [
+    ["Param57","眉毛样式Eyebrow style",0,5,0.1],
+    ["Param69","眉毛旋转Eyebrow rotation",-1,1,0.1],
+    ["Param81","眉毛上下Eyebrow position",-2,2,0.1],
+    ["Param82","眉毛宽窄Eyebrow width",0,3,0.1],
+  ],
+  "脸上捏": [
+    ["Param72","痣1Mole 1",0,3,0.1],
+    ["Param141","1痣X Mole 1 X position",-2,2,0.1],
+    ["Param142","1痣Y Mole 1 Y position",-2,2,0.1],
+    ["Param144","痣2Mole 2",0,3,0.1],
+    ["Param145","2痣X Mole 2 X position",-2,2,0.1],
+    ["Param146","2痣Y Mole 2 Y position",-2,2,0.1],
+    ["Param147","雀斑Freckles",0,3,0.1],
+    ["Param74","腮红样式Blusher style",0,5,0.1],
+    ["Param187","腮红上下Blusher position",-2,2,0.1],
+    ["Param73","脸上装饰Facial decorations",0,3,0.1],
+    ["Param205","脸上装饰2 Facial decorations2",0,3,0.1],
+    ["Param153","眼镜样式Style of glasses",0,5,0.1],
+    ["Param154","眼镜上下Glasses position",-2,2,0.1],
+  ],
+  "头上捏": [
+    ["Param128","头上装饰Head decorations",0,3,0.1],
+    ["Param204","头上装饰2 Head decorations2",0,3,0.1],
+    ["Param208","头后Behind the head fittings",0,3,0.1],
+    ["Param152","角Horns",0,3,0.1],
+    ["Param179","角长度Horn length",0,3,0.1],
+    ["Param","角2Horn 2",0,3,0.1],
+    ["Param199","角2长度Horn 2 length",0,3,0.1],
+    ["Param109","耳朵切换Ear shape",0,5,0.1],
+    ["Param151","兽耳Animal ears",0,3,0.1],
+    ["Param180","兽耳长度Length of animal ears",0,3,0.1],
+    ["Param181","L兽耳位置Position of left animal ear",-2,2,0.1],
+    ["Param182","R兽耳位置Position of right animal ear",-2,2,0.1],
+    ["Param148","L发卡Left hairpin",0,3,0.1],
+    ["Param149","R发卡Right hairpin",0,3,0.1],
+    ["Param130","特殊部件Special parts",0,3,0.1],
+    ["Param196","特殊部件2Special parts 2",0,3,0.1],
+  ],
+  "身上捏": [
+    ["Param50","校徽样式Style of emblem",0,5,0.1],
+    ["Param157","裙子长Skirt length",0,3,0.1],
+    ["Param137","衣服样式Dressing style",0,5,0.1],
+    ["Param192","换条裤衩Style of short pants",0,5,0.1],
+  ],};
+var states={};
+var inp={};
+
+function setP(pid, on){
+ var p=null;
+ for(var s in sections){ for(var j=0;j<sections[s].length;j++){ if(sections[s][j][0]===pid){p=sections[s][j];break}} if(p)break }
+ if(!p)return;
+ var v=on?(expVals[pid]!==undefined?expVals[pid]:0.5):0;
+ states[pid]=on;
+ var el=inp[pid];
+ if(el){el.s.value=v;el.n.textContent=Number(v).toFixed(2);el.tog.textContent=on?'ON':'OFF';el.tog.className=on?'on':'off';el.row.className=on?'r on':'r'}
+ S.setPetParam(pid,v);
+}
+
+function buildUI(){
+ var c=document.getElementById('ct');c.innerHTML='';
+ for(var s in sections){
+  var items=sections[s];
+  if(!items.length)continue;
+  var d=document.createElement('div');d.className='t';
+  d.innerHTML='<div class=tt>'+s+' ('+items.length+')</div>';
+  for(var j=0;j<items.length;j++){
+   var it=items[j],pid=it[0],lb=it[1],lo=it[2],hi=it[3],st=it[4];
+   var isExp=expVals[pid]!==undefined;
+   states[pid]=false;
+   var r=document.createElement('div');r.className='r';
+   var pref=isExp?'* ':'';
+   r.innerHTML='<label>'+pref+lb+'</label><span class=pid>'+pid+'</span><input type=range min='+lo+' max='+hi+' step='+st+' value=0><span class=nv>0.00</span><button class=off>OFF</button>';
+   var sl=r.querySelector('input[type=range]'),nv=r.querySelector('.nv'),tog=r.querySelector('button');
+   inp[pid]={s:sl,n:nv,tog:tog,row:r};
+   sl.addEventListener('input',function(p,l,h){return function(){var x=parseFloat(this.value)||0;nv.textContent=Number(x).toFixed(2);states[p]=x>0.001;tog.textContent=states[p]?'ON':'OFF';tog.className=states[p]?'on':'off';r.className=states[p]?'r on':'r';S.setPetParam(p,x)}}(pid,lo,hi));
+   tog.addEventListener('click',function(p){return function(){setP(p,!states[p])}}(pid));
+   d.appendChild(r);
+  }
+  c.appendChild(d);
+ }
+}
+
+document.getElementById('all-on').addEventListener('click',function(){for(var s in sections)for(var j=0;j<sections[s].length;j++)setP(sections[s][j][0],true)});
+document.getElementById('all-off').addEventListener('click',function(){for(var s in sections)for(var j=0;j<sections[s].length;j++)setP(sections[s][j][0],false)});
+document.getElementById('apply-exp').addEventListener('click',function(){var ps=[];for(var pid in expVals){ps.push({Id:pid,Value:expVals[pid]});states[pid]=true;var el=inp[pid];if(el){el.s.value=expVals[pid];el.n.textContent=Number(expVals[pid]).toFixed(2);el.tog.textContent='ON';el.tog.className='on';el.row.className='r on'}}if(ps.length)S.setPetMultiParams(ps)});
+document.getElementById('cx').addEventListener('click',function(){S.closeExpressionPanel()});
+document.getElementById('mn').addEventListener('click',function(){S.minimizeWindow()});
+document.getElementById('mx').addEventListener('click',function(){S.toggleMaximize()});
+buildUI();
+// ===== 自动眨眼开关 =====
+var blinkBtn=document.getElementById('blink-toggle');
+function updateBlinkBtn(on){
+ blinkBtn.textContent='👁 自动眨眼: '+(on?'ON':'OFF');
+ blinkBtn.style.borderColor=on?'rgba(76,175,80,0.5)':'rgba(244,67,54,0.4)';
+ blinkBtn.style.background=on?'rgba(76,175,80,0.2)':'rgba(244,67,54,0.15)';
+}
+blinkBtn.addEventListener('click',function(){try{S.toggleAutoBlink()}catch(_){}});
+try{
+ S.onAutoBlinkChanged(function(on){updateBlinkBtn(on)});
+ S.getAutoBlink().then(function(v){updateBlinkBtn(v)}).catch(function(){});
+}catch(_){}
+// ============================
+// 启动时加载已保存的自定义参数
+try{
+ S.getCustomParams().then(function(persisted){
+  if(!persisted||Object.keys(persisted).length===0) return;
+  for(var pid in persisted){
+   if(!persisted.hasOwnProperty(pid)) continue;
+   var v=persisted[pid];
+   states[pid]=v!==0&&v!==undefined;
+   var el=inp[pid];
+   if(el){
+    el.s.value=v;el.n.textContent=Number(v).toFixed(2);
+    el.tog.textContent=states[pid]?'ON':'OFF';
+    el.tog.className=states[pid]?'on':'off';
+    el.row.className=states[pid]?'r on':'r';
+   }
+  }
+ })["catch"](function(){});
+}catch(_){}
+</script>
+</body>
+</html>

@@ -2,11 +2,11 @@
   "name": "mcode-agent",
   "version": "1.0.0",
   "description": "墨白 Live2D 智能体 - Electron 壳",
-  "main": "electron/main.js",
+  "main": "src/electron/main.js",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "l2d-test": "electron electron/test_l2d.js"
+    "l2d-test": "electron src/electron/test_l2d.js"
   },
   "devDependencies": {
     "electron": "^33.4.11"

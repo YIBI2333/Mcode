@@ -1,139 +1,109 @@
-# Mcode — Desktop AI Agent with Live2D Avatar
+## 一、记忆模块
 
-**Mcode** is a desktop AI agent with a Live2D virtual catgirl avatar.
-It features long-term memory, file operations, command execution,
-TTS speech synthesis, and emotion-aware Live2D animation.
+### 1. mem0 长期记忆
+`src/core/memory.py` — mem0 + ChromaDB 向量记忆，`retrieve_context()` 检索 / `store_memory_async()` 存储
 
-## Core Features
+### 2. 短期记忆 + 对话压缩
+`src/infra/messages.py`
+- `short_term_memory` — 最近 N 轮对话（JSON 持久化到 `data/chat/`）
+- `build_messages()` — 组装 system prompt + 历史 + 用户输入
+- `_maybe_compress()` — 超长时后台压缩为一句摘要
+- `_build_timeline_context()` — 时间轴注入（仅首轮）
+- 人设文件缓存：`_get_persona_block()`
 
-| Feature | Description |
-|---------|-------------|
-| Long-term Memory | Mem0 + ChromaDB, cross-session memory |
-| Desktop Live2D | Electron 3-window shell, Prometheus Avatar |
-| File Operations | Read/write/list/delete/move via MCP tools |
-| Command Execution | Whitelisted commands with sandbox protection |
-| Streaming Chat | SSE streaming + ReAct Agent multi-step planning |
-| Tool Calling | 20+ MCP tools, OpenAI Function Calling format |
-| TTS Speech | Edge TTS (8 Chinese voices, free) |
-| Emotion Detection | LLM-based emotion -> Live2D expression + lip-sync |
-| Persona System | persona.md persistent personality + mood tracking |
+### 3. 人设文件
+`data/persona/`
+| 文件 | 用途 |
+|------|------|
+| `persona.md` | 基本人设（名字、性格、称呼） |
+| `state.md` | 实时状态（心情、好感度） |
+| `events.md` | 重要事件记录 |
+| `todos.md` | 待办与偏好 |
+| `timeline.md` | 时间轴（压缩时自动记录） |
 
-## Architecture
 
-Three-process architecture:
+## 二、对话模块
 
-1. **Electron Desktop Shell** (Node.js) — transparent always-on-top Live2D windows
-2. **Python Backend** (FastAPI :8866) — AI chat, memory, 20 MCP tools, TTS
-3. **Live2D Renderer** (Node.js :8850) — model rendering + WebSocket commands
-
-## Quick Start
-
-```bash
-pip install -r requirements.txt
-cd live2d_mcp && npm install && cd ..
-npm install
-# Edit config/model_config.json with your API key
-python main.py
+### 1. 消息构建
+`src/infra/messages.py` — `build_messages()` 按顺序拼装：
+```
+[时间块] → [系统提示] → [时间轴] → [记忆] → [人设] → [摘要] → [历史] → [用户输入]
 ```
 
-## MCP Tools (20 total)
+### 2. 对话流
+| 文件 | 职责 |
+|------|------|
+| `src/core/chat.py` | 对话入口：首轮非流式检测 tool_calls → 分流（工具/纯聊天） |
+| `src/core/agent.py` | Agent 工作流：Plan → Execute → Reflect |
+| `src/core/pipeline.py` | 流式拆句 + `SentenceEvent`/`ToolEvent`/`StatusEvent` 事件模型 |
+| `src/ui/routes/chat.py` | `POST /chat` SSE 端点，线程桥接 + TTS 调度 |
+| `src/infra/client.py` | LLM API 客户端（OpenAI 兼容，3 次重试） |
 
-| Category     | Tools |
-|-------------|-------|
-| File Ops    | list_directory, read_text_file, read_json_file, read_yaml_file, write_file, delete_file, move_file |
-| Command     | execute_command (whitelisted + sandbox) |
-| System      | get_current_time, get_system_info, get_env_var |
-| Network     | web_search (DuckDuckGo), download_file |
-| Desktop     | clipboard_read, clipboard_write |
-| Live2D      | live2d_motion |
-| Agent       | think, ask_user |
-| Persona     | read_persona, update_persona |
+### 3. TTS 语音合成
+| 文件 | 职责 |
+|------|------|
+| `src/tts/engine.py` | `TTSEngine` 抽象基类 |
+| `src/tts/edge_tts.py` | Edge TTS（免费微软语音，默认） |
+| `src/tts/openai_tts.py` | OpenAI 兼容 TTS（`/v1/audio/speech`） |
+| `src/ui/routes/shared.py` | `do_tts_sentence()` — 引擎选择 + 并发控制 + 音频缓存 |
 
-## Project Structure
+### 4. 定时任务
+| 文件 | 职责 |
+|------|------|
+| `src/core/scheduler.py` | 后台调度线程：once/daily/interval/cron 触发 |
+| `live2d/model/task_panel.html` | 任务管理面板 UI |
 
-```
-Mcode/
-├── main.py                  # Entry point
-├── requirements.txt          # Python dependencies
-├── package.json              # Node.js dependencies (Electron)
-├── config/
-│   ├── api_config.py        # API key loader (3-model separation)
-│   ├── settings.py          # Global settings
-│   ├── model_config.json    # Provider config (local, gitignored)
-│   └── model_config.example.json
-├── src/
-│   ├── core/                # Business logic
-│   │   ├── chat.py          # Dialogue generation engine
-│   │   ├── agent.py         # ReAct Agent loop
-│   │   ├── memory.py        # Mem0 memory engine
-│   │   ├── state.py         # TaskContext / StepRecord
-│   │   ├── sentence_splitter.py  # Sentence splitting utility
-│   │   └── tool_desc.py     # Tool name -> description mapping
-│   ├── infra/               # Infrastructure
-│   │   ├── client.py        # OpenAI-compatible API client
-│   │   ├── messages.py      # Message builder + chat history
-│   │   ├── mcp_client.py    # MCP client (stdio transport)
-│   │   ├── mcp_server.py    # MCP tool server (~20 tools)
-│   │   └── live2d_action.py # LLM emotion detection
-│   ├── tools/
-│   │   └── mcp_tools.py     # MCP -> OpenAI Function Calling adapter
-│   ├── tts/
-│   │   ├── engine.py        # Abstract TTS engine
-│   │   └── edge_tts.py      # Edge TTS implementation (8 voices)
-│   ├���─ ui/
-│   │   ├── web.py           # FastAPI App factory + run_web()
-│   │   ├── agent_launcher.py # Process launcher (Electron/Vite/Live2D)
-│   │   └── routes/          # Route modules (split by function)
-│   │       ├── shared.py    # Shared state + TTS helpers
-│   │       ├── chat.py      # POST /chat (SSE streaming + heartbeat)
-│   │       ├── pet.py       # /pet/status, /pet/command, /pet/presets
-│   │       ├── config_routes.py  # /api/model-config hot-reload
-│   │       ��── tts.py       # POST /tts
-│   │       ├���─ emotion.py   # POST /emotion
-│   │       └── history.py   # /api/chat/history CRUD
-│   └── utils/
-│       ├── tokens.py        # Token counting (tiktoken)
-│       └── live2d_constants.py  # Live2D semantic constants
-├── electron/                # Electron desktop shell
-│   ├── main.js              # Main process (3-window + IPC)
-│   ├── preload.js           # Pet window preload bridge
-│   └── chat_preload.js      # Chat window preload bridge
-├── live2d/                  # Live2D frontend assets
-│   └── model/
-│       ├── action_bar.html  # Button bar page
-│       ├── chat_panel.html  # Chat panel page
-│       ├── settings.html    # Settings panel page
-│       └── resources/       # Live2D character models (Haru / MO)
-├── live2d_mcp/              # Live2D MCP render service (Node.js)
-│   ├── server.js            # MCP Server + WebSocket Bridge + Express
-│   └── src/                 # Browser rendering entry
-└── data/                    # Runtime data (gitignored)
-    ├── persona.md            # AI persona (personality/mood/affinity/events)
-    ├── conversation_history.json  # Chat history persistence
-    ├── hf_cache/             # HuggingFace embedding model cache (~90MB)
-    ├── mem0_db/              # ChromaDB vector database
-    ├── Workspace/            # File operation sandbox
-    └── tts_cache/            # TTS audio cache
-```
 
-## Dependencies & Credits
+## 三、MCP 工具模块
 
-| Project | Purpose |
-|----------|---------|
-| [Mem0](https://github.com/mem0ai/mem0) | Long-term memory engine |
-| [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) | MCP protocol implementation |
-| [ChromaDB](https://www.trychroma.com/) | Vector database |
-| [sentence-transformers](https://github.com/UKPLab/sentence-transformers) | Local embedding model |
-| [edge-tts](https://github.com/rany2/edge-tts) | Free Microsoft neural TTS |
-| [FastAPI](https://fastapi.tiangolo.com/) | High-performance web framework |
-| [Electron](https://www.electronjs.org/) | Desktop shell framework |
-| [PIXI.js](https://pixijs.com/) | WebGL rendering engine |
+### 1. MCP 客户端
+`src/infra/mcp_client.py` + `src/tools/mcp_tools.py` — 连接工具服务器，把 LLM tool_call 转为 MCP 调用
 
-## License
+### 2. MCP 服务端
+`src/infra/mcp_server.py` — 注册 28 个工具（文件操作、搜索、截图、Live2D、人设、剪贴板等）
 
-MIT License
 
-## Links
+## 四、前端
 
-- GitHub: https://github.com/YIBI2333/Mcode
-- Author: YIBI2333
+桌面显示：Electron 透明悬浮窗
+
+### 1. 按钮区域
+`live2d/model/action_bar.html` + `electron/main.js` — 右下角浮动按钮栏（Chat/Expr/Settings/Tasks/Lock/Exit）
+
+### 2. Live2D 区域
+| 文件 | 职责 |
+|------|------|
+| `live2d_mcp/index.html` | Live2D 渲染 + 调整边框 + 对话气泡 |
+| `electron/main.js` | 透明窗口创建、拖拽缩放、锁定/穿透 |
+| `src/infra/live2d_action.py` | Live2D 动作映射（情绪 → motion/expression） |
+| `src/core/emotion.py` | 情绪检测（每句话分析情绪+强度） |
+| `src/utils/live2d_constants.py` | 口型参数映射（韵母 → Cubism 参数） |
+
+### 3. 对话窗口
+`live2d/model/chat_panel.html` — 聊天面板：消息列表 + 打字动画 + PlayQueue 顺序播放
+
+### 4. 设置面板
+`live2d/model/settings.html` — 统一设置入口
+
+#### 4.1 显示设置
+置顶、鼠标穿透、气泡开关、TTS 开关、位置重置
+
+#### 4.2 对话设置
+历史长度、记忆条数、最大步数、工具调用模式、启动打招呼、心跳间隔
+
+#### 4.3 服务商 + 模型设置
+`config/model_config.json` + `config/api_config.py` — 提供商管理（API Key/Base URL）+ 角色模型分配（chat/memory/tool/vision/tts）
+
+#### 4.4 调试设置
+DevTools 开关
+
+
+## 五、启动入口
+
+| 文件 | 职责 |
+|------|------|
+| `main.py` | 总入口：启动 Web 服务 → MCP → Live2D 渲染 → Electron |
+| `src/ui/web.py` | FastAPI 应用工厂 + 路由注册 |
+| `src/ui/agent_launcher.py` | 启动 Electron + Live2D MCP 子进程 |
+| `config/settings.py` | 全局配置加载 + `reload_from_dict()` 热重载 |
+| `config/app_config.json` | 运行时配置持久化 |

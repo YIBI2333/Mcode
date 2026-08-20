@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exp3 Parameter Test</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#1a1a2e;font:12px "Microsoft YaHei","PingFang SC",sans-serif;color:#e0d8f0}
+#bar{height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:#11111b;border-bottom:1px solid rgba(255,255,255,0.1);-webkit-app-region:drag}
+#bar span{font-size:13px;font-weight:600;color:#bbb8d0}
+#bar div{display:flex;gap:4px;-webkit-app-region:no-drag}
+.bn{width:28px;height:28px;border-radius:6px;border:none;background:transparent;color:#8b8aaa;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.bn:hover{background:rgba(255,255,255,0.08)}
+.bn.red:hover{background:rgba(255,72,72,0.25);color:#ff5e5e}
+#s{height:calc(100% - 36px);overflow-y:auto;padding:8px 12px}
+#s::-webkit-scrollbar{width:4px}
+#s::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+.btns{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}
+.bt{padding:4px 10px;border-radius:4px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:#e0d8f0;font-size:11px;cursor:pointer}
+.bt:hover{background:rgba(255,255,255,0.12)}
+.bt.on{background:rgba(76,175,80,0.35);border-color:#4caf50;color:#a5d6a7}
+.bt.off{background:rgba(244,67,54,0.25);border-color:#f44336;color:#ef9a9a}
+.row{display:flex;align-items:center;gap:6px;margin:3px 0;padding:3px 6px;border-radius:4px;border:1px solid transparent}
+.row:hover{background:rgba(255,255,255,0.03)}
+.row.on{border-color:rgba(76,175,80,0.3)}
+.row.off{border-color:rgba(244,67,54,0.15)}
+.row label{width:90px;font-size:11px;color:#c0b8e0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.row .pid{width:70px;font-size:9px;color:#7b8aaa;font-family:monospace}
+.row .desc{width:160px;font-size:10px;color:#8b7aaa;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.row input[type=range]{flex:1;accent-color:#7b6bc0;height:3px}
+.row .val{width:50px;font-size:10px;font-family:monospace;text-align:right;color:#e0d8f0}
+.row .tog{width:44px;font-size:10px;padding:2px 0;border-radius:3px;border:1px solid rgba(255,255,255,0.15);cursor:pointer;text-align:center;background:rgba(255,255,255,0.05);color:#c0b8e0}
+.row .tog.on{background:rgba(76,175,80,0.3);border-color:#4caf50;color:#a5d6a7}
+.row .tog.off{background:rgba(244,67,54,0.2);border-color:#f44336;color:#ef9a9a}
+</style>
+</head>
+<body>
+<div id="bar"><span>Exp3 Parameter Test (逐个开关测试)</span><div id="acts"><button class="bn" id="all-on">All ON</button><button class="bn" id="all-off">All OFF</button><button class="bn" id="invert">Invert</button><button class="bn red" id="cx" title="Close">X</button></div></div>
+<div id="s">
+<div class="btns"><button class="bt" id="btn-mouth">只看嘴巴相关</button><button class="bt" id="btn-face">只看脸/眼/眉</button><button class="bt" id="btn-hair">只看头发</button><button class="bt" id="btn-all">全部显示</button></div>
+<div id="ct"></div>
+</div>
+<script>
+var S=window.agentShell||{setPetParam:function(){},closeExpressionPanel:function(){}};
+var ALL=[];
+var states={};
+fetch('/live2d-resources/MO/墨白.exp3.json').then(function(r){return r.json()}).then(function(d){ALL=d.Parameters;init()}).catch(function(){init()});
+function setOn(pid,on){
+ var p=ALL.find(function(x){return x.Id===pid}); if(!p)return;
+ var v=on?p.Value:0;
+ states[pid]=on;
+ S.setPetParam(pid,v);
+ updateRow(pid);
+}
+function updateRow(pid){
+ var on=states[pid];
+ var el=document.getElementById('r-'+pid.replace(/[^a-zA-Z0-9]/g,'_'));
+ if(!el)return;
+ var tog=el.querySelector('.tog'),row=el;
+ if(on){tog.textContent='ON';tog.className='tog on';row.className='row on'}
+ else{tog.textContent='OFF';tog.className='tog off';row.className='row off'}
+}
+function filter(cat){
+ var c=document.getElementById('ct');
+ var rows=c.querySelectorAll('.row');
+ rows.forEach(function(r){r.style.display='';});
+ if(cat==='all')return;
+ var kw=[];
+ if(cat==='mouth')kw=['Mouth','mouth','Lip','lip','Teeth','teeth','Cat','cat'];
+ else if(cat==='face')kw=['Face','face','Eye','eye','Eyebrow','eyebrow','Brow','brow','Nose','nose','Chin','chin','Blusher','blusher'];
+ else if(cat==='hair')kw=['Bangs','bangs','Hair','hair','Temples','temples','Braid','braid','Ahoge','ahoge','Cocked','cocked'];
+ rows.forEach(function(r){
+  var txt=r.querySelector('.desc').textContent;
+  var show=false;
+  for(var i=0;i<kw.length;i++){if(txt.toLowerCase().indexOf(kw[i].toLowerCase())>=0){show=true;break}}
+  r.style.display=show?'':'none';
+ });
+}
+function init(){
+ var c=document.getElementById('ct');c.innerHTML='';
+ for(var i=0;i<ALL.length;i++){
+  var p=ALL[i],pid=p.Id,val=p.Value,dv=0;
+  states[pid]=false;
+  var row=document.createElement('div');row.className='row off';row.id='r-'+pid.replace(/[^a-zA-Z0-9]/g,'_');
+  var descTxt=pid.replace('Param','P');
+  row.innerHTML='<label>'+pid+'</label><span class=desc>'+descTxt+'</span><input type=range min=0 max='+(Math.abs(val)*2||2)+' step=0.01 value=0><span class=val>0.00</span><button class=\"tog off\">OFF</button>';
+  var sl=row.querySelector('input[type=range]'),nb=row.querySelector('.val'),tg=row.querySelector('.tog');
+  sl.addEventListener('input',function(p,v){return function(){var x=parseFloat(this.value)||0;nb.textContent=x.toFixed(2);states[p]=x>0.001;updateRow(p);S.setPetParam(p,x)}}(pid,val));
+  tg.addEventListener('click',function(p){return function(){setOn(p,!states[p])}}(pid));
+  c.appendChild(row);
+ }
+}
+document.getElementById('all-on').addEventListener('click',function(){for(var i=0;i<ALL.length;i++)setOn(ALL[i].Id,true)});
+document.getElementById('all-off').addEventListener('click',function(){for(var i=0;i<ALL.length;i++)setOn(ALL[i].Id,false)});
+document.getElementById('invert').addEventListener('click',function(){for(var pid in states)setOn(pid,!states[pid])});
+document.getElementById('cx').addEventListener('click',function(){if(S.closeExpressionPanel)S.closeExpressionPanel()});
+document.getElementById('btn-mouth').addEventListener('click',function(){filter('mouth')});
+document.getElementById('btn-face').addEventListener('click',function(){filter('face')});
+document.getElementById('btn-hair').addEventListener('click',function(){filter('hair')});
+document.getElementById('btn-all').addEventListener('click',function(){filter('all')});
+</script>
+</body>
+</html>

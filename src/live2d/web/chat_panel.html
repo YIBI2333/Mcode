@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨白 · 对话</title>
+<link rel="stylesheet" href="/model/css/theme.css">
+<link rel="stylesheet" href="/model/css/chat.css">
+</head>
+<body>
+
+<div id="title-bar">
+  <span id="title-label"><span id="status-dot" class="status-dot"></span>墨白 · 对话</span>
+  <div id="title-actions">
+    <button class="title-btn" id="btn-fold"      title="折叠">▾</button>
+    <button class="title-btn" id="btn-minimize"  title="最小化">−</button>
+    <button class="title-btn" id="btn-maximize"  title="最大化">□</button>
+    <button class="title-btn close" id="btn-close" title="关闭">✕</button>
+  </div>
+</div>
+
+<div id="msg-list">
+  <div id="msg-flow"></div>
+  <div id="task-status"></div>
+</div>
+
+<!-- 工具详情弹窗 -->
+<div id="tool-detail-overlay" class="overlay">
+  <div id="tool-detail-box">
+    <div id="tool-detail-header">
+      <span>工具返回详情</span>
+      <button id="tool-detail-close">✕</button>
+    </div>
+    <div id="tool-detail-content"></div>
+  </div>
+</div>
+
+<!-- 拖拽上传遮罩 -->
+<div id="drag-overlay"><div id="drag-overlay-text">📂 拖放文件到此处</div></div>
+
+<!-- 图片灯箱 -->
+<div id="lightbox" class="overlay lightbox"><img id="lightbox-img" src="" alt=""></div>
+
+<div id="files-bar"></div>
+<div id="input-bar">
+  <input id="file-input" type="file" multiple style="display:none">
+  <button id="upload-btn" title="上传文件">+</button>
+  <textarea id="chat-input" placeholder="想说点什么..." rows="1" autofocus></textarea>
+  <button id="stop-btn" title="停止生成">■</button>
+  <button id="send-btn">▶</button>
+</div>
+
+<!-- ── Chat 模块（按依赖顺序加载） ── -->
+<script src="/model/js/chat/namespace.js"></script>
+<script src="/model/js/chat/dom.js"></script>
+<script src="/model/js/chat/markdown.js"></script>
+<script src="/model/js/chat/audio.js"></script>
+<script src="/model/js/chat/shell.js"></script>
+<script src="/model/js/chat/play-queue.js"></script>
+<script src="/model/js/chat/sse.js"></script>
+<script src="/model/js/chat/files.js"></script>
+<script src="/model/js/chat/history.js"></script>
+<script src="/model/js/chat/poll.js"></script>
+<script src="/model/js/chat/send.js"></script>
+<script src="/model/js/chat/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --btn-bg: rgba(20, 20, 35, 0.55);
+  --btn-hover: rgba(40, 40, 65, 0.78);
+  --btn-active: rgba(106, 90, 205, 0.55);
+  --btn-border: rgba(255, 255, 255, 0.12);
+  --btn-icon: #c8b8e8;
+  --btn-icon-active: #ffd700;
+}
+html, body {
+  width: 100%; height: 100%; overflow: hidden;
+  background: transparent;
+  -webkit-app-region: no-drag;
+}
+#btn-bar {
+  position: absolute; right: 6px; top: 50%;
+  transform: translateY(-50%);
+  display: flex; flex-direction: column;
+  align-items: center; gap: 10px;
+  opacity: 0.45; transition: opacity 0.4s;
+}
+#btn-bar:hover { opacity: 1; }
+.pet-btn {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 1.5px solid var(--btn-border);
+  background: var(--btn-bg);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  color: var(--btn-icon);
+  font-size: 17px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.25s; outline: none;
+}
+.pet-btn:hover {
+  background: var(--btn-hover);
+  border-color: rgba(255,255,255,0.3);
+  transform: scale(1.12);
+}
+.pet-btn:active { transform: scale(0.92); }
+.pet-btn.active {
+  background: var(--btn-active);
+  border-color: rgba(200,180,255,0.4);
+  color: var(--btn-icon-active);
+  box-shadow: 0 0 12px rgba(106,90,205,0.35);
+}
+.pet-btn { position: relative; }
+.pet-btn:hover::after {
+  content: attr(data-tip);
+  position: absolute; left: 50%; bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  padding: 4px 10px; border-radius: 6px;
+  background: rgba(20,20,35,0.92);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #e0d8f0; font-size: 12px;
+  white-space: nowrap; pointer-events: none; z-index: 99;
+}
+</style>
+</head>
+<body>
+<div id="btn-bar">
+  <!-- Chat -->
+  <button class="pet-btn" id="btn-chat" data-tip="Chat">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  </button>
+  <!-- Expression -->
+  <button class="pet-btn" id="btn-expr" data-tip="Expr">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+  </button>
+  <!-- Settings -->
+  <button class="pet-btn" id="btn-settings" data-tip="Settings">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
+  <!-- Tasks -->
+  <button class="pet-btn" id="btn-tasks" data-tip="Tasks">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/></svg>
+  </button>
+  <!-- Lock -->
+  <button class="pet-btn" id="btn-lock" data-tip="Lock">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+  </button>
+  <!-- Exit -->
+  <button class="pet-btn" id="btn-exit" data-tip="Exit" style="color:#ff6b6b">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+</div>
+<script>
+var S = window.agentShell || {
+  toggleLock: function(){}, toggleChat: function(){},
+  openExpressionPanel: function(){}, closeExpressionPanel: function(){}, openTaskPanel: function(){}, closeTaskPanel: function(){},
+  openSettings: function(){}, closeSettings: function(){}, close: function(){},
+  onLockChanged: function(_cb){}, onChatVisible: function(_cb){},
+  onSettingsVisible: function(_cb){}, onExpressionVisible: function(_cb){},
+};
+
+function E(id) { return document.getElementById(id); }
+var Bchat = E('btn-chat');
+var Bexpr = E('btn-expr');
+var Bset  = E('btn-settings');
+var Block = E('btn-lock');
+	var Btask = E("btn-tasks");
+var Bexit = E('btn-exit');
+
+var chatOpen = false;
+var setOpen = false;
+var taskOpen = false;
+var exprOpen = false;
+
+Bchat.addEventListener('click', function(){
+  chatOpen = !chatOpen;
+  Bchat.classList.toggle('active', chatOpen);
+  S.toggleChat();
+});
+
+Bexpr.addEventListener('click', function(){
+  exprOpen = !exprOpen;
+  Bexpr.classList.toggle('active', exprOpen);
+  if (exprOpen) S.openExpressionPanel();
+  else S.closeExpressionPanel();
+});
+
+Bset.addEventListener('click', function(){
+  setOpen = !setOpen;
+  Bset.classList.toggle('active', setOpen);
+  if (setOpen) S.openSettings();
+  else S.closeSettings();
+});
+
+Btask.addEventListener('click', function(){
+  taskOpen = !taskOpen;
+  Btask.classList.toggle('active', taskOpen);
+  if (taskOpen) S.openTaskPanel();
+  else S.closeTaskPanel();
+});
+
+function updateLock(locked) {
+  if (locked) {
+    Block.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1"/></svg>';
+  } else {
+    Block.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+  }
+  Block.classList.toggle('active', locked);
+}
+S.onLockChanged(function(v){ updateLock(v); });
+Block.addEventListener('click', function(){ S.toggleLock(); });
+
+Bexit.addEventListener('click', function(){ S.close(); });
+
+S.onChatVisible(function(v){ if (!v) { chatOpen=false; Bchat.classList.remove('active'); } });
+S.onSettingsVisible(function(v){ if (!v) { setOpen=false; Bset.classList.remove('active'); } });
+S.onExpressionVisible(function(v){ if (!v) { exprOpen=false; Bexpr.classList.remove('active'); } });
+</script>
+</body>
+</html>

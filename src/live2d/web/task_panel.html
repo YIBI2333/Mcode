@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨白 · 任务中心</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#181825;color:#e6e0f5;font:14px/1.65 "Microsoft YaHei","PingFang SC",sans-serif;display:flex}
+/* 导航栏 */
+#nav{width:180px;background:#11111b;border-right:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;padding:12px 0;flex-shrink:0}
+.nav-title{padding:8px 20px 16px;font-size:13px;font-weight:600;color:#8b8aaa;letter-spacing:1px}
+.nav-item{padding:10px 20px;cursor:pointer;color:#8b8aaa;font-size:13px;transition:all 0.15s;border-left:3px solid transparent}
+.nav-item:hover{color:#e8e4f8;background:rgba(255,255,255,0.04)}
+.nav-item.active{color:#c4a0ff;background:rgba(123,107,192,0.12);border-left-color:#7b6bc0}
+.nav-item .icon{margin-right:8px}
+.nav-divider{margin:8px 16px;border-top:1px solid rgba(255,255,255,0.06)}
+.nav-section{padding:6px 20px;font-size:11px;color:#5a5a7a;text-transform:uppercase;letter-spacing:1px}
+/* 主区域 */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#header{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:#11111b;border-bottom:1px solid rgba(255,255,255,0.08);-webkit-app-region:drag}
+#header h2{font-size:15px;font-weight:600;color:#ddd8f0}
+#header-actions{display:flex;gap:8px;-webkit-app-region:no-drag}
+.btn{padding:6px 14px;border-radius:8px;border:none;font-size:13px;cursor:pointer;transition:all 0.15s;font-family:inherit}
+.btn-primary{background:rgba(123,107,192,0.25);color:#c4a0ff;border:1px solid #7b6bc0}
+.btn-primary:hover{background:rgba(123,107,192,0.4)}
+.btn-danger{background:rgba(232,93,93,0.15);color:#ff8a8a;border:1px solid rgba(232,93,93,0.3)}
+.btn-danger:hover{background:rgba(232,93,93,0.3)}
+.btn-sm{padding:3px 10px;font-size:11px}
+#content{flex:1;overflow-y:auto;padding:16px 20px}
+/* 任务卡片 */
+.task-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:14px 16px;margin-bottom:10px;transition:all 0.15s}
+.task-card:hover{border-color:rgba(255,255,255,0.12)}
+.task-card.disabled{opacity:0.45}
+.task-top{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.task-name{font-size:14px;font-weight:600;flex:1}
+.task-type{font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(123,107,192,0.2);color:#b0a0e0}
+.task-type.once{background:rgba(79,227,130,0.15);color:#7be8a0}
+.task-schedule{font-size:12px;color:#8b8aaa;margin-bottom:4px}
+.task-prompt{font-size:12px;color:#bbb8d0;background:rgba(0,0,0,0.2);padding:6px 10px;border-radius:6px;margin-top:6px}
+.task-actions{display:flex;gap:6px;margin-top:8px}
+/* 表单 */
+#form-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:99;align-items:center;justify-content:center}
+#form-overlay.show{display:flex}
+#form-box{background:#1e1e2e;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:24px;width:460px;max-height:80vh;overflow-y:auto}
+#form-box h3{font-size:16px;margin-bottom:16px}
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;color:#8b8aaa;margin-bottom:4px;display:block}
+.form-input,.form-select,.form-textarea{width:100%;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#e6e0f5;font-size:13px;font-family:inherit;outline:none}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:#7b6bc0}
+.form-textarea{min-height:60px;resize:vertical}
+.form-row{display:flex;gap:10px}
+.form-row>*{flex:1}
+.empty-state{text-align:center;padding:60px 20px;color:#6a6a8a}
+.empty-state .icon{font-size:40px;margin-bottom:12px;opacity:0.5}
+/* 开关 */
+.toggle{width:36px;height:20px;border-radius:10px;background:rgba(255,255,255,0.1);cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0}
+.toggle.on{background:#7b6bc0}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left 0.2s}
+.toggle.on::after{left:18px}
+</style>
+</head>
+<body>
+<div id="nav">
+  <div class="nav-title">⚙️ 控制中心</div>
+  <div class="nav-item active" data-page="tasks"><span class="icon">📋</span>定时任务</div>
+  <div class="nav-divider"></div>
+  <div class="nav-section">即将推出</div>
+  <div class="nav-item" style="opacity:0.4;pointer-events:none"><span class="icon">🖥️</span>屏幕控制</div>
+  <div class="nav-item" style="opacity:0.4;pointer-events:none"><span class="icon">📝</span>规划执行</div>
+  <div class="nav-item" style="opacity:0.4;pointer-events:none"><span class="icon">🧠</span>自主思考</div>
+</div>
+
+<div id="main">
+  <div id="header">
+    <h2>📋 定时任务</h2>
+    <div id="header-actions">
+      <button class="btn btn-primary" onclick="openForm()">+ 添加任务</button>
+      <button class="btn" style="background:rgba(255,255,255,0.04);color:#8b8aaa" onclick="window.agentShell.minimizeWindow()">—</button>
+    </div>
+  </div>
+  <div id="content"></div>
+</div>
+
+<div id="form-overlay">
+  <div id="form-box">
+    <h3 id="form-title">添加定时任务</h3>
+    <div class="form-group"><label class="form-label">任务名称</label><input class="form-input" id="f-name" placeholder="例如：提醒喝水"></div>
+    <div class="form-group"><label class="form-label">触发类型</label>
+      <select class="form-select" id="f-type" onchange="onTypeChange()">
+        <option value="daily">每天 (指定时间)</option>
+        <option value="interval">每隔 (N 分钟)</option>
+        <option value="once">一次性 (指定日期时间)</option>
+      </select>
+    </div>
+    <div class="form-group" id="f-time-group"><label class="form-label">触发时间</label><input class="form-input" id="f-time" type="time" value="09:00" step="60"></div>
+    <div class="form-group" id="f-minutes-group" style="display:none"><label class="form-label">间隔 (分钟)</label><input class="form-input" id="f-minutes" type="number" value="60" min="1"></div>
+    <div class="form-group" id="f-datetime-group" style="display:none"><label class="form-label">日期时间</label><input class="form-input" id="f-datetime" type="datetime-local"></div>
+    <div class="form-group"><label class="form-label">提示词 (发送给AI的内容)</label><textarea class="form-textarea" id="f-prompt" placeholder="例如：提醒主人站起来活动一下，喝点水"></textarea></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+      <button class="btn" style="background:rgba(255,255,255,0.04);color:#8b8aaa" onclick="closeForm()">取消</button>
+      <button class="btn btn-primary" id="f-submit" onclick="submitForm()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var S = window.agentShell || {};
+var editingId = null;
+
+async function loadTasks() {
+  var r = await fetch('/api/tasks');
+  var tasks = await r.json();
+  var c = document.getElementById('content');
+  if (!tasks.length) {
+    c.innerHTML = '<div class="empty-state"><div class="icon">📋</div><div>还没有定时任务</div><div style="font-size:12px;margin-top:4px">点击上方按钮或让 AI 帮你添加</div></div>';
+    return;
+  }
+  c.innerHTML = tasks.map(function(t) {
+    var typeLabel = {daily:'每天',interval:'每隔'+t.schedule.minutes+'分钟',once:'一次性',cron:'Cron'}[t.schedule.type]||t.schedule.type;
+    var timeInfo = '';
+    if (t.schedule.type==='daily') timeInfo = '⏰ '+t.schedule.at+' 每天';
+    else if (t.schedule.type==='interval') timeInfo = '🔄 每 '+t.schedule.minutes+' 分钟';
+    else if (t.schedule.type==='once') timeInfo = '📅 '+t.schedule.at;
+    else timeInfo = JSON.stringify(t.schedule);
+    var lastRun = t.last_run ? '上次: '+t.last_run : '尚未执行';
+    return '<div class="task-card'+(t.enabled?'':' disabled')+'">'
+      +'<div class="task-top">'
+      +'<span class="task-name">'+esc(t.name)+'</span>'
+      +'<span class="task-type '+(t.schedule.type||'')+'">'+typeLabel+'</span>'
+      +'<div class="toggle'+(t.enabled?' on':'')+'" onclick="toggleTask(\''+t.id+'\','+!t.enabled+')"></div>'
+      +'</div>'
+      +'<div class="task-schedule">'+timeInfo+' · '+lastRun+'</div>'
+      +'<div class="task-prompt">'+esc(t.prompt)+'</div>'
+      +'<div class="task-actions">'
+      +'<button class="btn btn-sm btn-primary" onclick="editTask(\''+t.id+'\')">编辑</button>'
+      +'<button class="btn btn-sm btn-danger" onclick="deleteTask(\''+t.id+'\')">删除</button>'
+      +'</div></div>';
+  }).join('');
+}
+
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function openForm() { editingId=null; document.getElementById('form-title').textContent='添加定时任务'; document.getElementById('f-submit').textContent='保存'; clearForm(); document.getElementById('form-overlay').classList.add('show'); }
+function closeForm() { document.getElementById('form-overlay').classList.remove('show'); }
+function clearForm() { document.getElementById('f-name').value=''; document.getElementById('f-type').value='daily'; document.getElementById('f-time').value='09:00'; document.getElementById('f-minutes').value='60'; document.getElementById('f-datetime').value=''; document.getElementById('f-prompt').value=''; onTypeChange(); }
+
+function onTypeChange() {
+  var t = document.getElementById('f-type').value;
+  document.getElementById('f-time-group').style.display = (t==='daily')?'':'none';
+  document.getElementById('f-minutes-group').style.display = (t==='interval')?'':'none';
+  document.getElementById('f-datetime-group').style.display = (t==='once')?'':'none';
+}
+
+async function editTask(id) {
+  var r = await fetch('/api/tasks');
+  var tasks = await r.json();
+  var t = tasks.find(function(x){return x.id===id});
+  if (!t) return;
+  editingId = id;
+  document.getElementById('form-title').textContent = '编辑任务';
+  document.getElementById('f-submit').textContent = '更新';
+  document.getElementById('f-name').value = t.name;
+  document.getElementById('f-type').value = t.schedule.type||'daily';
+  document.getElementById('f-prompt').value = t.prompt;
+  if (t.schedule.type==='daily') document.getElementById('f-time').value = t.schedule.at||'09:00';
+  else if (t.schedule.type==='interval') document.getElementById('f-minutes').value = t.schedule.minutes||60;
+  else if (t.schedule.type==='once') document.getElementById('f-datetime').value = (t.schedule.at||'').replace(' ','T');
+  onTypeChange();
+  document.getElementById('form-overlay').classList.add('show');
+}
+
+async function submitForm() {
+  var schedule = {};
+  var type = document.getElementById('f-type').value;
+  if (type==='daily') schedule = {type:'daily', at:document.getElementById('f-time').value};
+  else if (type==='interval') schedule = {type:'interval', minutes:parseInt(document.getElementById('f-minutes').value)||60};
+  else if (type==='once') schedule = {type:'once', at:document.getElementById('f-datetime').value.replace('T',' ')};
+  var body = {
+    name: document.getElementById('f-name').value.trim(),
+    schedule: schedule,
+    prompt: document.getElementById('f-prompt').value.trim()
+  };
+  if (!body.name || !body.prompt) { alert('名称和提示词不能为空'); return; }
+  var url = editingId ? '/api/tasks/'+editingId : '/api/tasks';
+  var method = editingId ? 'PUT' : 'POST';
+  await fetch(url, {method:method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  closeForm();
+  loadTasks();
+}
+
+async function toggleTask(id, on) {
+  await fetch('/api/tasks/'+id, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled:on})});
+  loadTasks();
+}
+
+async function deleteTask(id) {
+  if (!confirm('确定删除这个任务？')) return;
+  await fetch('/api/tasks/'+id, {method:'DELETE'});
+  loadTasks();
+}
+
+document.getElementById('form-overlay').addEventListener('click', function(e) { if (e.target===this) closeForm(); });
+// 窗口显示/获焦时自动刷新
+window.addEventListener('focus', loadTasks);
+document.addEventListener('visibilitychange', function(){ if (!document.hidden) loadTasks(); });
+loadTasks();
+</script>
+</body>
+</html>

@@ -4,6 +4,27 @@ import os
 import json
 import shutil
 import sys
+import uuid
+
+# ====================== OpenCode 请求头 ======================
+
+# OpenCode 网关要求每个请求带上 x-opencode-session 头用于会话追踪。
+# 进程启动时生成一次，同一进程内所有 opencode 请求复用同一个会话 ID。
+_OPENCODE_SESSION_ID = f"ses_{uuid.uuid4().hex}"
+_OPENCODE_HOST = "opencode.ai"
+
+
+def is_opencode(base_url: str) -> bool:
+    """判断给定的 base_url 是否指向 OpenCode 服务。"""
+    return _OPENCODE_HOST in (base_url or "").lower()
+
+
+def opencode_headers(base_url: str) -> dict:
+    """若 base_url 指向 OpenCode，返回需要附加的额外请求头；否则返回空 dict。"""
+    if is_opencode(base_url):
+        return {"x-opencode-session": _OPENCODE_SESSION_ID}
+    return {}
+
 
 # ====================== 模块变量（由 _load_model_config 赋值） ======================
 
@@ -22,6 +43,10 @@ TOOL_LLM_BASE_URL = ""
 VISION_LLM_KEY = ""
 VISION_LLM_MODEL = ""
 VISION_LLM_BASE_URL = ""
+
+TTS_LLM_KEY = ""
+TTS_LLM_MODEL = ""
+TTS_LLM_BASE_URL = ""
 
 
 # ====================== 从 model_config.json 加载 ======================
@@ -123,6 +148,7 @@ def _load_model_config():
     _apply_role(roles.get("memory"), providers, defaults, "MEMORY")
     _apply_role(roles.get("tool"), providers, defaults, "TOOL")
     _apply_role(roles.get("vision"), providers, defaults, "VISION")
+    _apply_role(roles.get("tts"), providers, defaults, "TTS")
 
 
 def _apply_role(role_cfg, providers, defaults, prefix):

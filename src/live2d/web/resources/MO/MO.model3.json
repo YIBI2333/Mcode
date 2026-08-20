@@ -1,0 +1,39 @@
+{
+  "Version": 3,
+  "FileReferences": {
+    "Moc": "MO.moc3",
+    "Textures": [
+      "MO.4096/texture_00.png",
+      "MO.4096/texture_01.png",
+      "MO.4096/texture_02.png",
+      "MO.4096/texture_03.png",
+      "MO.4096/texture_04.png",
+      "MO.4096/texture_05.png",
+      "MO.4096/texture_06.png",
+      "MO.4096/texture_07.png",
+      "MO.4096/texture_08.png",
+      "MO.4096/texture_09.png"
+    ],
+    "Physics": "MO.physics3.json",
+    "Motions": {
+      "Default": [
+        {"File": "motion/1.motion3.json"},
+        {"File": "motion/2.motion3.json"},
+        {"File": "motion/3.motion3.json"}
+      ]
+    },
+    "DisplayInfo": "MO.cdi3.json"
+  },
+  "Groups": [
+    {
+      "Target": "Parameter",
+      "Name": "EyeBlink",
+      "Ids": []
+    },
+    {
+      "Target": "Parameter",
+      "Name": "LipSync",
+      "Ids": []
+    }
+  ]
+}
